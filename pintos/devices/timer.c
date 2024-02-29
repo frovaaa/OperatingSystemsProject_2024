@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "threads/sleepy_thread.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -24,6 +25,9 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
+/* List of sleepy threads */
+static struct list sleepy_threads_list;
+
 static intr_handler_func timer_interrupt;
 static bool too_many_loops(unsigned loops);
 static void busy_wait(int64_t loops);
@@ -34,6 +38,8 @@ static void real_time_delay(int64_t num, int32_t denom);
    and registers the corresponding interrupt. */
 void timer_init(void)
 {
+  // Setting sleepy_threads_list
+  list_init(&sleepy_threads_list);
   pit_configure_channel(0, 2, TIMER_FREQ);
   intr_register_ext(0x20, timer_interrupt, "8254 Timer");
 }
