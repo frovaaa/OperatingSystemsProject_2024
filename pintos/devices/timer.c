@@ -8,6 +8,8 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/sleepy_thread.h"
+#include "tests/threads/tests.h"
+// #include "lib/kernel/list.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -92,11 +94,44 @@ timer_elapsed(int64_t then)
    be turned on. */
 void timer_sleep(int64_t ticks)
 {
-  int64_t start = timer_ticks();
 
   ASSERT(intr_get_level() == INTR_ON);
-  while (timer_elapsed(start) < ticks)
-    thread_yield();
+  int64_t awake_at = timer_ticks() + ticks;
+  struct sleepy_thread * st = malloc(sizeof(struct sleepy_thread));
+  if(!st) {
+    fail("Failed malloc of sleepy thread");
+  }
+  st->awake_time = awake_at;
+  st->thread_p = thread_current();
+
+  // stop interrupts when entering critical section
+  enum intr_level old_level = intr_disable();
+
+  struct list_elem * pos;
+
+  if (list_empty(&sleepy_threads_list)){
+    list_push_back(&sleepy_threads_list, (struct list_elem *) st);
+  } else {
+     for (pos = list_begin(&sleepy_threads_list);
+         pos != list_end(&sleepy_threads_list);
+         pos = list_next(pos))
+    {
+      struct sleepy_thread * it = list_entry(pos, struct sleepy_thread, elem);
+      if(it->awake_time > awake_at) 
+      {
+        list_insert(pos, (struct list_elem *) st);
+        break;
+      }
+      if(pos == list_end(&sleepy_threads_list)) {
+        list_push_back(&sleepy_threads_list, (struct list_elem *) st);
+      }
+    }
+  }
+
+  thread_block();
+  free(st);
+  // turn on interrupts when exiting critical section (thread unblocked)
+  intr_set_level(old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
