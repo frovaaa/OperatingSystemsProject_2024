@@ -20,10 +20,6 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
-// TESTING: New sleep
-static struct thread *sleepy_thread;
-static int64_t sleepy_finish;
-
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -92,27 +88,9 @@ void timer_sleep(int64_t ticks)
 {
   int64_t start = timer_ticks();
 
-  // printf("Ticks %d\n", ticks);
-
-  // ASSERT(intr_get_level() == INTR_ON);
-
-  enum intr_level old_level = intr_disable();
-
-  sleepy_thread = thread_current();
-  sleepy_finish = start + ticks;
-  // TODO: Add current thread to shared list, with start
-
-  printf("SLEEEEEPYYYY for Ticks: %d\n", sleepy_finish);
-
-  thread_block();
-
-  printf("Exited Sleep UAAAAAA\n");
-
-  // while (timer_elapsed(start) < ticks)
-  // {
-  //   thread_block();
-  // }
-  intr_set_level(old_level);
+  ASSERT(intr_get_level() == INTR_ON);
+  while (timer_elapsed(start) < ticks)
+    thread_yield();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -183,13 +161,6 @@ static void
 timer_interrupt(struct intr_frame *args UNUSED)
 {
   ticks++;
-  // printf("Int Ticks: %d\n", ticks);
-  if (sleepy_finish != 0 && ticks >= sleepy_finish)
-  {
-    printf("SVEGLIAAAAA\nTicks now: %d\nTicks finish: %d\n", ticks, sleepy_finish);
-    sleepy_finish = 0;
-    thread_unblock(sleepy_thread);
-  }
   thread_tick();
 }
 
