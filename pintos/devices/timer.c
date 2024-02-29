@@ -90,47 +90,30 @@ timer_elapsed(int64_t then)
   return timer_ticks() - then;
 }
 
+bool compare_awake_time(const struct list_elem *t1_, const struct list_elem *t2_, void *aux UNUSED)
+{
+  const struct sleepy_thread *t1 = list_entry(t1_, struct sleepy_thread, elem);
+  const struct sleepy_thread *t2 = list_entry(t2_, struct sleepy_thread, elem);
+
+  return t1->awake_time < t2->awake_time;
+}
+
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void timer_sleep(int64_t ticks)
 {
-
   ASSERT(intr_get_level() == INTR_ON);
-  int64_t awake_at = timer_ticks() + ticks;
-  struct sleepy_thread * st = malloc(sizeof(struct sleepy_thread));
-  if(!st) {
-    fail("Failed malloc of sleepy thread");
-  }
-  st->awake_time = awake_at;
-  st->thread_p = thread_current();
+  struct thread *current_thread = thread_current();
+  enum intr_level old_level;
+  old_level = intr_disable();
 
-  // stop interrupts when entering critical section
-  enum intr_level old_level = intr_disable();
+  struct sleepy_thread st;
+  st.thread_p = current_thread;
+  st.awake_time = ticks + timer_ticks();
 
-  struct list_elem * pos;
-
-  if (list_empty(&sleepy_threads_list)){
-    list_push_back(&sleepy_threads_list, (struct list_elem *) st);
-  } else {
-     for (pos = list_begin(&sleepy_threads_list);
-         pos != list_end(&sleepy_threads_list);
-         pos = list_next(pos))
-    {
-      struct sleepy_thread * it = list_entry(pos, struct sleepy_thread, elem);
-      if(it->awake_time > awake_at) 
-      {
-        list_insert(pos, (struct list_elem *) st);
-        break;
-      }
-      if(pos == list_end(&sleepy_threads_list)) {
-        list_push_back(&sleepy_threads_list, (struct list_elem *) st);
-      }
-    }
-  }
+  list_insert_ordered(&sleepy_threads_list, &st.elem, compare_awake_time, NULL);
 
   thread_block();
-  free(st);
-  // turn on interrupts when exiting critical section (thread unblocked)
   intr_set_level(old_level);
 }
 
@@ -198,10 +181,32 @@ void timer_print_stats(void)
 }
 
 /* Timer interrupt handler. */
-static void
-timer_interrupt(struct intr_frame *args UNUSED)
+static void timer_interrupt(struct intr_frame *args UNUSED)
 {
   ticks++;
+
+  enum intr_level old_level = intr_disable();
+
+  struct list_elem *pos, *next;
+  for (pos = list_begin(&sleepy_threads_list); pos != list_end(&sleepy_threads_list); pos = next)
+  {
+    struct sleepy_thread *it = list_entry(pos, struct sleepy_thread, elem);
+    next = list_next(pos); // Get the next element before potentially removing the current one
+
+    if (it->awake_time <= ticks)
+    {
+      // printf("Thread unblocked at tick: %d\n", it->awake_time);
+      thread_unblock(it->thread_p);
+      list_remove(pos); // Remove the current element from the list
+    }
+    else
+    {
+      // printf("Thread was not ready\n");
+      break; // As the list is sorted, no need to check the rest
+    }
+  }
+
+  intr_set_level(old_level);
   thread_tick();
 }
 
