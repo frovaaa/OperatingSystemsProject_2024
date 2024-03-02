@@ -8,8 +8,6 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/sleepy_thread.h"
-#include "tests/threads/tests.h"
-// #include "lib/kernel/list.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
