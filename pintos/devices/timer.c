@@ -33,6 +33,7 @@ static bool too_many_loops(unsigned loops);
 static void busy_wait(int64_t loops);
 static void real_time_sleep(int64_t num, int32_t denom);
 static void real_time_delay(int64_t num, int32_t denom);
+static bool compare_awake_time(const struct list_elem *le1, const struct list_elem *le2, void *aux UNUSED);
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -88,12 +89,12 @@ timer_elapsed(int64_t then)
   return timer_ticks() - then;
 }
 
-bool compare_awake_time(const struct list_elem *t1_, const struct list_elem *t2_, void *aux UNUSED)
+static bool compare_awake_time(const struct list_elem *le1, const struct list_elem *le2, void *aux UNUSED)
 {
-  const struct sleepy_thread *t1 = list_entry(t1_, struct sleepy_thread, elem);
-  const struct sleepy_thread *t2 = list_entry(t2_, struct sleepy_thread, elem);
+  const struct sleepy_thread *st1 = list_entry(le1, struct sleepy_thread, elem);
+  const struct sleepy_thread *st2 = list_entry(le2, struct sleepy_thread, elem);
 
-  return t1->awake_time < t2->awake_time;
+  return st1->awake_time < st2->awake_time;
 }
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
@@ -101,17 +102,28 @@ bool compare_awake_time(const struct list_elem *t1_, const struct list_elem *t2_
 void timer_sleep(int64_t ticks)
 {
   ASSERT(intr_get_level() == INTR_ON);
+
+  // Get a pointer to the current thread
   struct thread *current_thread = thread_current();
+
+  // Save the current interrupt state (should be ON as the ASSERT above checks for it)
+  // Disable interrupts, this is needed to access safely the sleepy_threads_list and to be able to call thread_block()
   enum intr_level old_level;
   old_level = intr_disable();
 
+  // Create a new sleepy_thread struct and update the thread_p and awake_time fields
   struct sleepy_thread st;
   st.thread_p = current_thread;
   st.awake_time = ticks + timer_ticks();
 
+  // Insert the new sleepy_thread in the sleepy_threads_list in a sorted way
+  // Using the compare_awake_time function to compare the awake_time of the sleepy_threads
   list_insert_ordered(&sleepy_threads_list, &st.elem, compare_awake_time, NULL);
 
+  // Block the current thread
   thread_block();
+
+  // The thread has been unblocked, re-enable interrupts
   intr_set_level(old_level);
 }
 
@@ -183,28 +195,38 @@ static void timer_interrupt(struct intr_frame *args UNUSED)
 {
   ticks++;
 
+  // Save the current interrupt state and disable them
   enum intr_level old_level = intr_disable();
 
+  // Iterate through the sleepy_threads_list and unblock the threads that are ready (awake_time <= ticks)
+  // If the thread is unblocked, remove it from the list
   struct list_elem *pos, *next;
   for (pos = list_begin(&sleepy_threads_list); pos != list_end(&sleepy_threads_list); pos = next)
   {
+    // Unwrap the list element to get the sleepy_thread struct
     struct sleepy_thread *it = list_entry(pos, struct sleepy_thread, elem);
-    next = list_next(pos); // Get the next element before potentially removing the current one
 
+    // Get the next element before potentially removing the current one
+    next = list_next(pos);
+
+    // Check if the thread is ready to be unblocked
     if (it->awake_time <= ticks)
     {
-      // printf("Thread unblocked at tick: %d\n", it->awake_time);
+      // Unblock the thread (puts the thread in the ready state and adds it to the ready list)
       thread_unblock(it->thread_p);
-      list_remove(pos); // Remove the current element from the list
+      // Remove the current element from the list
+      list_remove(pos);
     }
     else
     {
-      // printf("Thread was not ready\n");
-      break; // As the list is sorted, no need to check the rest
+      // As the list is sorted, no need to check the rest
+      break;
     }
   }
 
+  // Restore the previous interrupt state
   intr_set_level(old_level);
+
   thread_tick();
 }
 
