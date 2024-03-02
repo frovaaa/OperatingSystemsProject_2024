@@ -26,8 +26,11 @@ All the files not present in the repository are kept as the original ones.
 
 # Milestones
 
-- [x] Milestone 1 [Report PDF](./reports/OS_Milestone1.pdf)
+- [x] Milestone 1
+  * Description: Added Hello World test
 - [x] Milestone 2
+    * [Report PDF](./reports/OS_Milestone2.pdf)
+    * Description: Modified the `timer_sleep` to make it not busy waiting
 - [ ] Milestone 3
 - [ ] Milestone 4
 - [ ] Milestone 5
