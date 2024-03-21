@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fpr_arith.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -58,6 +59,8 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
+
+FPReal load_avg = 0; // The system load average, which is the average number of threads ready to run over the past minute.
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -387,34 +390,72 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int nice_value) 
 {
-  /* Not yet implemented. */
+  thread_current ()->nice = nice_value;
+  thread_current ()->priority = PRI_MAX - FPR_TO_INT(FPR_DIV_INT(thread_current ()->recent_cpu, 4)) - (thread_current ()->nice * 2);
+  priority_check(thread_current ()->priority);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return FPR_TO_INT(FPR_MUL_INT(load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return FPR_TO_INT(FPR_MUL_INT(thread_current ()->recent_cpu, 100));
 }
+
+/* Update the system load average. */
+void update_load_avg(void) {
+  int ready_threads = list_size(&ready_list);
+  if (thread_current() != idle_thread) {
+    ready_threads++;
+  }
+  load_avg = FPR_ADD_FPR(FPR_DIV_INT(FPR_MUL_INT(load_avg, 59), 60), FPR_DIV_INT(INT_TO_FPR(ready_threads), 60));
+}
+
+/* Update the recent_cpu of the current thread.
+*/
+thread_action_func * thread_update_recent_cpu(void) {
+  struct thread *t = thread_current();
+  if (t != idle_thread) {
+    t->recent_cpu =FPR_ADD_INT(FPR_MUL_FPR(FPR_DIV_FPR(FPR_MUL_INT(load_avg, 2), FPR_ADD_INT(FPR_MUL_INT(load_avg, 2), 1)), t->recent_cpu), t->nice);
+  }
+  return NULL;
+}
+
+/* Increment the recent_cpu of the current thread.
+*/
+thread_action_func * thread_increment_recent_cpu(void) {
+  struct thread *t = thread_current();
+  if (t != idle_thread) {
+    t->recent_cpu = FPR_ADD_INT(t->recent_cpu, 1);
+  }
+  return NULL;
+}
+
+/* Update the priority of the current thread.
+*/
+thread_action_func * update_priority(void) {
+  struct thread *t = thread_current();
+  t->priority = PRI_MAX - FPR_TO_INT(FPR_DIV_INT(t->recent_cpu, 4)) - (t->nice * 2);
+  priority_check(t->priority);
+  return NULL;
+}
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
 

@@ -4,7 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-
+#include <threads/fpr_arith.h>
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -89,6 +89,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    int nice;                           /* Nice value. */
+    FPReal recent_cpu;                  /* Recent CPU. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -139,5 +141,9 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+void update_load_avg(void);
+thread_action_func * thread_update_recent_cpu(void);
+thread_action_func * thread_increment_recent_cpu(void);
+thread_action_func * update_priority(void);
 
 #endif /* threads/thread.h */
