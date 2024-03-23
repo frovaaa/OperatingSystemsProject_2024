@@ -1,0 +1,213 @@
+\documentclass[11pt]{scrartcl}
+\newcommand*\student[1]{\newcommand{\thestudent}{{#1}}}
+\newcommand*\course[1]{\newcommand{\thecourse}{{#1}}}
+\newcommand*\courseshort[1]{\newcommand{\thecourseshort}{{#1}}}
+\newcommand*\assnumber[1]{\newcommand{\theassnumber}{{#1}}}
+\setcounter{secnumdepth}{4}
+
+\student{}
+\course{}
+\courseshort{} 
+\assnumber{}
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\usepackage[utf8]{inputenc} % Required for inputting international characters
+\usepackage[T1]{fontenc} % Use 8-bit encoding
+\usepackage[sc]{mathpazo}
+\usepackage{caption, subcaption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{inconsolata}
+\usepackage[svgnames,table]{xcolor}
+\usepackage{booktabs}
+\usepackage{boldline}
+% \usepackage{minted}
+\usepackage{mathtools}
+\usepackage{chemfig}
+% \usepackage{minted}
+\usepackage{caption}
+\usepackage{subcaption}
+
+	
+\usepackage{color, colortbl}
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\definecolor{LightGreen}{rgb}{1,0.88,1}
+\definecolor{LightRed}{rgb}{0.8,1,0.90}
+\definecolor{LightBoh}{rgb}{0.3,0.7,0.88}
+
+
+\usepackage[english]{babel} % English language hyphenation
+\usepackage{amssymb}
+\usepackage{amsmath}% Math packages
+\usepackage{bm}
+\usepackage{listings} % Code listings, with syntax highlighting
+\usepackage{graphicx} % Required for inserting images
+\usepackage{float}
+
+% \usepackage{minted}
+
+\usepackage{courier} %% Sets font for listing as Courier.
+\usepackage{listings, xcolor}
+
+\lstset{
+tabsize = 4, %% set tab space width
+showstringspaces = false, %% prevent space marking in strings, string is defined as the text that is generally printed directly to the console
+numbers = left, %% display line numbers on the left
+commentstyle = \color{green}, %% set comment color
+keywordstyle = \color{blue}, %% set keyword color
+stringstyle = \color{red}, %% set string color
+rulecolor = \color{black}, %% set frame color to avoid being affected by text color
+basicstyle = \small \ttfamily , %% set listing font and size
+breaklines = true, %% enable line breaking
+numberstyle = \tiny,
+}
+
+
+%             \begin{lstlisting}[language = Java, frame = single, firstnumber = last, escapeinside={(*@}{@*)}]
+% % 
+%             \end{lstlisting}
+%----------------------------------------------------------------------------------------
+%	DOCUMENT MARGINS
+%----------------------------------------------------------------------------------------
+
+
+\usepackage{geometry} % For page dimensions and margins
+\geometry{
+	paper=a4paper, 
+	top=2.5cm, % Top margin
+	bottom=3cm, % Bottom margin
+	left=2cm, % Left margin
+	right=2cm, % Right margin
+}
+\setlength\parindent{0pt}
+
+%----------------------------------------------------------------------------------------
+%	SECTION TITLES
+%----------------------------------------------------------------------------------------
+
+\usepackage{sectsty}
+\sectionfont{\vspace{6pt}\centering\normalfont\LARGE\scshape}
+\subsectionfont{\normalfont\Large\bfseries} % \subsection{} styling
+\subsubsectionfont{\normalfont\large\itshape} % \subsubsection{} styling
+\paragraphfont{\normalfont\scshape} % \paragraph{} styling
+
+%----------------------------------------------------------------------------------------
+%	HEADERS AND FOOTERS
+%----------------------------------------------------------------------------------------
+
+\usepackage{scrlayer-scrpage}
+\ofoot*{\pagemark} % Right footer
+\ifoot*{} % Left footer
+\cfoot*{\thecourseshort \  \theassnumber} % Centre footer
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\title{	
+    \vspace{-3cm} 
+    \begin{figure}[H]
+        \hspace{-2cm}
+    	\includegraphics[width=65mm]{./template/usi-inf-logo.png}
+    \end{figure}
+    \vspace{1cm} 
+	\normalfont\large
+	\textsc{Operating Systems\thecourse}\\
+	\vspace{5pt}
+	\rule{\linewidth}{0.5pt}\\
+	\vspace{10pt}
+	{\LARGE PintOS: Report Project \textbf{\#3} \theassnumber}\\
+	\vspace{5pt}
+	\rule{\linewidth}{0.5pt}\\
+	\vspace{5pt}
+}
+
+\author{
+	\LARGE
+	Group \#6 \\
+	Davide Frova, Costanza Rodriguez Gavazzi
+}
+
+\date{\normalsize Fall Semester, \today}
+
+\begin{document}
+
+\maketitle
+
+\section{Files changed }
+\begin{itemize}
+    \item \textbf{/pintos/threads/thread.h} (\textit{modified})
+    \item \textbf{/pintos/threads/thread.c} (\textit{modified})
+    \item \textbf{/pintos/threads/fpr\_arith.h} (\textit{added})
+\end{itemize}
+
+\section{Changes}
+
+\subsection*{/pintos/threads/thread.h}
+
+\begin{itemize}
+    \item Added import for \textbf{threads/fpr\_arith.h}
+    \item Added \textbf{Nice} constant definitions (min, default, max)
+    \item Added \textbf{int nice} and \textbf{FPReal recent\_cpu} in \textbf{struct thread}
+    \item Added method signatures for the new methods added in \textbf{/pintos/threads/threads.c}
+
+\end{itemize}
+
+\subsection*{/pintos/devices/thread.c}
+
+\begin{itemize}
+    \item (\textit{added}) \textbf{Includes}:
+    \begin{itemize}
+        \item threads/fpr\_arith.h
+        \item devices/timer.h
+    \end{itemize}
+    \item (\textit{added}) \textbf{Global variable}:
+    \begin{itemize}
+    \item \textbf{FPReal load\_avg}, this stores the system load average
+    \end{itemize}
+    
+    \item (\textit{modified}): \textbf{void thread\_tick}; Added the check for the -mlfqs option according to given specs (to handle recent\_cpu, priority, load\_avg)
+    
+    \item (\textit{modified}): \textbf{tid\_t thread\_create(void)};
+    Added the check for the -mlfqs option, set default nice value and recent\_cpu value. Update priority and check for the priority of the new thread and if necessary, yield current thread.
+
+    \item (\textit{added}): \textbf{void thread\_unblock};
+    We inserted the thread in an ordered way in the \textbf{ready\_list} instead of just pushing it back. This is to ensure that \textbf{ready\_list} is ordered such that the head of the list has the highest priority thread.
+
+    \item (\textit{added}): \textbf{static bool compare\_priority};
+    Compares the priorities of two threads t1, t2 and returns true if t1 has a higher priority than t2. We use this when calling \textbf{list\_insert\_ordered}
+    
+    
+    \item (\textit{modified}): \textbf{void thread\_yield};
+    We inserted the thread in an ordered way in the \textbf{ready\_list} instead of just pushing it back. This is to ensure that \textbf{ready\_list} is ordered such that the head of the list has the highest priority thread.
+
+    \item (\textit{modified}): \textbf{void thread\_set\_priority};
+    We update the priority of the current thread. Check if it's necessary to yield comparing current with the top of the \textbf{ready\_list}. Check for the -mlfqs option (in that case, the method is ignored because in -mlfqs mode the priority is computed based on nice values and recent\_cpu);
+
+    \item (\textit{added}): \textbf{void thread\_set\_nice};
+    Updates the current thread nice value and updates priority based on that. If necessary, yield.
+    
+    \item (\textit{modified}): \textbf{int thread\_get\_nice};
+    Get the current thread's nice value.
+    
+    \item (\textit{modified}): \textbf{int thread\_get\_load\_avg};
+    Compute and return the system load average.
+    
+    \item (\textit{modified}): \textbf{int thread\_get\_recent\_cpu};
+    Compute and return the current thread's recent CPU value.
+
+    \item (\textit{added}): \textbf{void update\_load\_avg};
+    Computes and sets the system load average.
+
+    \item (\textit{added}): \textbf{thread\_action\_func * thread\_update\_recent\_cpu};
+    Computes and updates the recent CPU value of the given thread. Used in the \textbf{thread\_tick} method, for each thread. 
+    
+    \item (\textit{added}): \textbf{thread\_action\_func * update\_priority};
+    Computes and updates the recent thread priority. Check if computed value is in valid range using constants defined previously. Used in the \textbf{thread\_tick} method, for each thread.
+
+\end{itemize}
+
+
+\end{document}
