@@ -31,7 +31,9 @@ All the files not present in the repository are kept as the original ones.
 - [x] Milestone 2
     * [Report PDF](./reports/project2/OS_Project2.pdf)
     * Description: Modified the `timer_sleep` to make it not busy waiting
-- [ ] Milestone 3
+- [x] Milestone 3
+    * [Report PDF](./reports/project3/OS_Project3.pdf)
+    * Description: Updated the scheduler to use the priority of the threads and nice values
 - [ ] Milestone 4
 - [ ] Milestone 5
 - [ ] Milestone 6
