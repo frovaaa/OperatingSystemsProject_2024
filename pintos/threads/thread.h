@@ -24,6 +24,10 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define NICE_MIN -20
+#define NICE_DEFAULT 0
+#define NICE_MAX 20
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -142,8 +146,8 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 void update_load_avg(void);
-thread_action_func * thread_update_recent_cpu(void);
-thread_action_func * thread_increment_recent_cpu(void);
-thread_action_func * update_priority(void);
+thread_action_func * thread_update_recent_cpu(struct thread *t, void *aux UNUSED);
+thread_action_func * thread_increment_recent_cpu(struct thread *t, void *aux UNUSED);
+thread_action_func * update_priority(struct thread *t, void *aux UNUSED);
 
 #endif /* threads/thread.h */

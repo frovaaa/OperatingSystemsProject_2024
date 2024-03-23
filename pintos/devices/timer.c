@@ -228,27 +228,6 @@ static void timer_interrupt(struct intr_frame *args UNUSED)
   // Restore the previous interrupt state
   intr_set_level(old_level);
 
-
-if (thread_mlfqs)
-  {
-    // Every tick, update the recent_cpu and load_avg of all threads
-    thread_foreach(thread_increment_recent_cpu, NULL);
-
-    // Every second, update the recent_cpu and load_avg of all threads
-    if (ticks % TIMER_FREQ == 0)
-    {
-      update_load_avg();
-      thread_foreach(thread_update_recent_cpu, NULL);
-  
-    }
-
-    // Every 4 ticks, update the priority of all threads
-    if (ticks % 4 == 0)
-    {
-      thread_foreach(update_priority, NULL);
-    }
-  }
-
   thread_tick();
 }
 
