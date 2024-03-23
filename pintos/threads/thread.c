@@ -144,8 +144,9 @@ thread_tick (void)
   
   if (thread_mlfqs)
   {
-    // Every tick, update the recent_cpu and load_avg of all threads
-    thread_foreach(thread_increment_recent_cpu, NULL);
+    // Every tick, update the recent_cpu 
+     if (t != idle_thread)
+      FPR_INC (&t->recent_cpu);
 
     // Every second, update the recent_cpu and load_avg of all threads
     if (timer_ticks() % TIMER_FREQ == 0)
@@ -506,18 +507,10 @@ void update_load_avg(void) {
 /* Update the recent_cpu of the current thread.
 */
 thread_action_func * thread_update_recent_cpu(struct thread *t, void *aux UNUSED) {
-    t->recent_cpu =FPR_ADD_INT(FPR_MUL_FPR(FPR_DIV_FPR(FPR_MUL_INT(load_avg, 2), FPR_ADD_INT(FPR_MUL_INT(load_avg, 2), 1)), t->recent_cpu), t->nice);
+    t->recent_cpu = FPR_ADD_INT(FPR_MUL_FPR(FPR_DIV_FPR(FPR_MUL_INT(load_avg, 2), FPR_ADD_INT(FPR_MUL_INT(load_avg, 2), 1)), t->recent_cpu), t->nice);
   return NULL;
 }
 
-/* Increment the recent_cpu of the current thread.
-*/
-thread_action_func * thread_increment_recent_cpu(struct thread *t, void *aux UNUSED) {
-  if (t != idle_thread) {
-    t->recent_cpu = FPR_ADD_INT(t->recent_cpu, 1);
-  }
-  return NULL;
-}
 
 /* Update the priority of the current thread.
 */
