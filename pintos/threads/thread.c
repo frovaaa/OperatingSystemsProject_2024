@@ -309,7 +309,6 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  // list_push_back (&ready_list, &t->elem);
   list_insert_ordered (&ready_list, &t->elem, compare_priority, NULL);
   
   t->status = THREAD_READY;
@@ -608,7 +607,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
-  // list_insert_ordered (&all_list, &t->allelem, compare_priority, NULL);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
