@@ -72,9 +72,9 @@ start_process(void *file_name_)
 
   // now argv contains the arguments, argc contains the count
 
-  // now push argv and argv on the stack (actual values)
-  if_.esp -= (argc + 1) * sizeof(char *);  // make room on the stack
-  memcpy(if_.esp, argv, (argc + 1) * sizeof(char *));  // copy argv onto the stack
+  // pushing argv and argv on the stack (actual values)
+  if_.esp -= (argc + 1) * sizeof(char *);             // make room on the stack
+  memcpy(if_.esp, argv, (argc + 1) * sizeof(char *)); // copy argv onto the stack
 
   uint8_t word_align = 0;
 
@@ -89,14 +89,13 @@ start_process(void *file_name_)
     *(char **)if_.esp = if_.esp + sizeof(char *);
   }
 
-// push argc onto stack
-  if_.esp -= sizeof(int);  // make room for argc
-  *(int *)if_.esp = argc;  // copy argc onto the stack
+  // push argc onto stack
+  if_.esp -= sizeof(int); // make room for argc
+  *(int *)if_.esp = argc; // copy argc onto the stack
 
   // push return address onto the stack
   if_.esp -= sizeof(void *);
   *(void **)if_.esp = 0;
-
 
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
