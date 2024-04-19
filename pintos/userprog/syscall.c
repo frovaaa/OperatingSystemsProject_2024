@@ -39,7 +39,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     // setting the exit status of the current thread
     *(thread_current()->exit_status) = status;
     // unblocking the parent thread because the child has exited
-    thread_unblock(thread_current()->parent_tid);
+    thread_unblock(thread_get(thread_current()->parent_tid));
     thread_exit ();
     NOT_REACHED (); // as seen in thread.c, panic if thread cannot exit
     break;

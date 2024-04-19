@@ -37,6 +37,8 @@ tid_t process_execute(const char *file_name)
     return TID_ERROR;
   strlcpy(fn_copy, file_name, PGSIZE);
 
+  
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -52,6 +54,10 @@ start_process(void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+
+  // remove the file name from the file_name
+  
+
 
   char *token, *save_ptr;
   char **argv = NULL;
@@ -131,16 +137,13 @@ start_process(void *file_name_)
    does nothing. */
 int process_wait(tid_t child_tid UNUSED) 
 {
+  
   struct thread *child_thread = thread_get(child_tid);
-  if (child_thread == NULL || child_tid == TID_ERROR || child_thread->parent_tid != thread_current()->tid)
-  {
-    return -1;
-  }
-  struct thread *parent_thread = thread_get(child_thread->parent_tid);
-  if (parent_thread->status == THREAD_BLOCKED)
-  {
-    return -1;
-  }
+  if(child_thread == NULL) return -1;
+  if (child_thread->parent_tid != -7007) return -1;
+
+  child_thread->parent_tid = thread_current()->tid;
+  
   // save the address of the exit status of the child in the child thread
   // so that, once it has exited and died, the parent can still access it
   int child_exit_status;
@@ -160,6 +163,11 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
+
+  if (cur->exit_status == -8008) {
+    int exit_code = cur->exit_status;
+    printf("%s: exit(%d)\n", cur->name, exit_code);
+  }
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
