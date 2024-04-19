@@ -95,6 +95,8 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
     int nice;                           /* Nice value. */
     FPReal recent_cpu;                  /* Recent CPU. */
+    tid_t parent_tid;                   /* Parent thread identifier. */
+    int * exit_status;                  /* Exit status. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -141,6 +143,7 @@ void thread_set_priority (int);
 void priority_check(int);
 static bool compare_priority(const struct list_elem *le1, const struct list_elem *le2, void *aux UNUSED);
 
+struct thread * thread_get(tid_t);
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);

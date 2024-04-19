@@ -62,7 +62,7 @@ start_process(void *file_name_)
   {
     argv = realloc(argv, sizeof(char *) * ++argc);
     if (argv == NULL)
-      exit(-1); // memory allocation failed, handle it here
+      thread_exit(); // memory allocation failed, handle it here
     argv[argc - 1] = token;
   }
 
@@ -83,7 +83,8 @@ start_process(void *file_name_)
   memcpy(if_.esp, &word_align, sizeof(uint8_t));
 
   // push the addresses of the arguments onto the stack
-  for (int i = argc; i >= 0; i--)
+  int i;
+  for (i = argc; i >= 0; i--)
   {
     if_.esp -= sizeof(char *);
     *(char **)if_.esp = if_.esp + sizeof(char *);
@@ -128,9 +129,30 @@ start_process(void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int process_wait(tid_t child_tid UNUSED)
+int process_wait(tid_t child_tid UNUSED) 
 {
-  return -1;
+  struct thread *child_thread = thread_get(child_tid);
+  if (child_thread == NULL || child_tid == TID_ERROR || child_thread->parent_tid != thread_current()->tid)
+  {
+    return -1;
+  }
+  struct thread *parent_thread = thread_get(child_thread->parent_tid);
+  if (parent_thread->status == THREAD_BLOCKED)
+  {
+    return -1;
+  }
+  // save the address of the exit status of the child in the child thread
+  // so that, once it has exited and died, the parent can still access it
+  int child_exit_status;
+  child_thread->exit_status = &child_exit_status;
+
+  // disable interrupts
+  enum intr_level old_level = intr_disable();
+  // block the parent thread
+  thread_block();
+  // enable interrupts
+  intr_set_level(old_level);
+  return child_exit_status;
 }
 
 /* Free the current process's resources. */

@@ -31,9 +31,15 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
   
   case SYS_EXIT:
+    // exit status is stored in the thread's exit_status
     esp += sizeof(int);
     int status = *(int *)(esp);
+    // gettin the status by popping the stack
     f->eax = status;
+    // setting the exit status of the current thread
+    *(thread_current()->exit_status) = status;
+    // unblocking the parent thread because the child has exited
+    thread_unblock(thread_current()->parent_tid);
     thread_exit ();
     NOT_REACHED (); // as seen in thread.c, panic if thread cannot exit
     break;

@@ -473,6 +473,20 @@ thread_set_nice (int nice_value UNUSED)
   }
 }
 
+/* Given a tid_t returns the corresponding thread */
+struct thread * thread_get(tid_t tid) {
+  struct list_elem *e;
+  for (e = list_begin (&all_list); e != list_end (&all_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, allelem);
+      if (t->tid == tid) {
+        return t;
+      }
+    }
+  return NULL;
+}
+
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
