@@ -4,18 +4,17 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-static void syscall_handler (struct intr_frame *);
+static void syscall_handler(struct intr_frame *);
 
-void
-syscall_init (void) 
+void syscall_init(void)
 {
-  intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler(struct intr_frame *f UNUSED)
 {
-  void * esp = f->esp + sizeof(enum syscall_code);
+  void *esp = f->esp + sizeof(enum syscall_code);
   enum syscall_code s_code = *(enum syscall_code *)esp;
 
   switch (s_code)
@@ -24,31 +23,28 @@ syscall_handler (struct intr_frame *f UNUSED)
     esp += sizeof(int);
     int fd = *(int *)(esp);
     esp += sizeof(void *);
-    void * buffer = (void *)(esp);
+    void *buffer = (void *)(esp);
     esp += sizeof(size_t);
     size_t size = *(size_t *)(esp);
     putbuf(buffer, size);
     break;
-  
+
   case SYS_EXIT:
     // exit status is stored in the thread's exit_status
     esp += sizeof(int);
-    int status = *(int *)(esp);
-    // gettin the status by popping the stack
-    f->eax = status;
+    f->eax = *(int *)(esp);
     // setting the exit status of the current thread
-    *(thread_current()->exit_status) = status;
+    *(thread_current()->exit_status) = f->eax;
     // unblocking the parent thread because the child has exited
-    thread_unblock(thread_get(thread_current()->parent_tid));
-    thread_exit ();
-    NOT_REACHED (); // as seen in thread.c, panic if thread cannot exit
+    printf("%s: exit(%d)\n", thread_current()->name, f->eax);
+    thread_unblock(thread_current()->parent);
+    thread_exit();
+    NOT_REACHED(); // as seen in thread.c, panic if thread cannot exit
     break;
 
   default:
     printf("Unknown system call\n");
-    thread_exit ();
-    NOT_REACHED ();
+    thread_exit();
+    NOT_REACHED();
   }
 }
-
-

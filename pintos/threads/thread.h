@@ -95,7 +95,7 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
     int nice;                           /* Nice value. */
     FPReal recent_cpu;                  /* Recent CPU. */
-    tid_t parent_tid;                   /* Parent thread identifier. */
+    struct thread * parent;             /* Parent thread. */
     int * exit_status;                  /* Exit status. */
 
     /* Shared between thread.c and synch.c. */
