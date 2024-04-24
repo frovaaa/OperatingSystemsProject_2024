@@ -21,9 +21,9 @@ syscall_handler(struct intr_frame *f UNUSED)
 
   switch (s_code)
   {
-    int fd;
   case SYS_WRITE:
-    fd = *(int *)(f->esp + bytes_read);
+  {
+    int fd = *(int *)(f->esp + bytes_read);
     bytes_read += sizeof(int);
 
     char *buffer = *(char **)(f->esp + bytes_read);
@@ -35,23 +35,27 @@ syscall_handler(struct intr_frame *f UNUSED)
     putbuf(buffer, size);
 
     break;
+  }
 
   case SYS_EXIT:
-    // exit status is stored in the thread's exit_status
-    f->eax = *(int *)(f->esp + bytes_read);
+  { // exit status is stored in the thread's exit_status
+    int exit_status = *(int *)(f->esp + bytes_read);
     bytes_read += sizeof(int);
 
+    f->eax = exit_status;
+
     // setting the exit status of the current thread
-    *(thread_current()->exit_status) = f->eax;
+    *(thread_current()->exit_status) = exit_status;
 
     // unblocking the parent thread because the child has exited
-    printf("%s: exit(%d)\n", thread_current()->name, f->eax);
+    printf("%s: exit(%d)\n", thread_current()->name, exit_status);
 
     thread_unblock(thread_current()->parent);
     thread_exit();
 
     NOT_REACHED(); // as seen in thread.c, panic if thread cannot exit
     break;
+  }
 
   default:
     printf("Unknown system call\n");

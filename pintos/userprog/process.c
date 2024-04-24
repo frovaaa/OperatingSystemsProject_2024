@@ -124,7 +124,7 @@ start_process (void *file_name_)
     *(char **)if_.esp = args_pointers[i];
   }
 
-  // Push argv pointers on stack
+  // Push argv pointer on stack (address of the last if_.esp argument pointer)
   if_.esp -= sizeof(char **);
   *(char **)if_.esp = (char *) if_.esp + sizeof(char **);
 
