@@ -21,6 +21,8 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+#define MAX_ARGS 128
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -31,6 +33,10 @@ process_execute (const char *file_name)
   char *fn_copy;
   tid_t tid;
 
+  char *save_ptr;
+  char *args[MAX_ARGS];
+  int num_args = 0;
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -38,18 +44,20 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-  char name[16];
-  strlcpy(name, file_name, 16);
-  int i;
-  for (i = 0; name[i] != '\0'; i++) {
-      if (name[i] == ' ') {
-          name[i] = '\0';
-          break;
-      }
+  char f_name[MAX_ARGS];
+  strlcpy(f_name, file_name, MAX_ARGS);
+
+  /* Parse the file_name into separate arguments. */
+  args[num_args] = strtok_r(f_name, " ", &save_ptr);
+  while (args[num_args] != NULL) {
+    num_args++;
+    if (num_args >= MAX_ARGS)
+      break;
+    args[num_args] = strtok_r(NULL, " ", &save_ptr);
   }
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (args[0], PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -63,70 +71,76 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+  
 
-  int i;
-  for (i = 0; file_name[i] != '\0'; i++) {
-      if (file_name[i] == ' ') {
-          file_name[i] = '\0';
-          break;
-      }
+  // parse the file_name into separate arguments
+  char *save_ptr;
+  char *args[MAX_ARGS];
+  int num_args = 0;
+
+  args[num_args] = strtok_r(file_name, " ", &save_ptr);
+  while (args[num_args] != NULL) {
+    num_args++;
+    if (num_args >= MAX_ARGS)
+      break;
+    args[num_args] = strtok_r(NULL, " ", &save_ptr);
   }
 
+
   /* Initialize interrupt frame and load executable. */
-  memset(&if_, 0, sizeof if_);
+  memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load(file_name, &if_.eip, &if_.esp);
+  success = load (args[0], &if_.eip, &if_.esp);
 
-  char *token, *save_ptr;
-  char *argv[128];  // Declare an array with a fixed size
-  int argc = 0;
+  // Now we push the arguments in reverse order onto the stack
+  // First we create an array to save all the pointers
 
-  for (token = strtok_r(file_name, " ", &save_ptr); token != NULL;
-       token = strtok_r(NULL, " ", &save_ptr))
+  char *args_pointers[num_args];
+  int i;
+  for (i = num_args - 1; i >= 0; i--)
   {
-    if (argc >= 128)  // Check if the array is full
-    {
-      thread_exit();  // If the array is full, exit the thread
-    }
-    argv[argc++] = token;
+    if_.esp -= strlen(args[i]) + 1;
+    memcpy(if_.esp, args[i], strlen(args[i]) + 1);
+    args_pointers[i] = if_.esp;
   }
 
-  // add NULL as the last argument
-  argv[argc] = 0;
+  // Word align
+  uintptr_t align = (uintptr_t) if_.esp % 4;
+  if (align != 0) {
+    if_.esp -= align;
+    memset(if_.esp, 0, align);
+  }
 
-  // now argv contains the arguments, argc contains the count
+  // argv[argc] = 0
+  if_.esp -= sizeof(char *);
+  memset(if_.esp, 0, sizeof(char *));
 
-  // pushing argv and argv on the stack (actual values)
-  if_.esp -= (argc + 1) * sizeof(char *);             // make room on the stack
-  memcpy(if_.esp, argv, (argc + 1) * sizeof(char *)); // copy argv onto the stack
-
-  uint8_t word_align = 0;
-
-  // push word_align onto the stack
-  if_.esp -= sizeof(uint8_t);
-  memcpy(if_.esp, &word_align, sizeof(uint8_t));
-
-  // push the addresses of the arguments onto the stack
-  for (i = argc; i >= 0; i--)
+  // Now we push the pointers onto the stack
+  for (i = num_args - 1; i >= 0; i--)
   {
     if_.esp -= sizeof(char *);
-    *(char **)if_.esp = argv[i];  // Push the address of the argument
+    *(char **)if_.esp = args_pointers[i];
   }
 
-  // push argc onto stack
-  if_.esp -= sizeof(int); // make room for argc
-  *(int *)if_.esp = argc; // copy argc onto the stack
+  // Push argv pointers on stack
+  if_.esp -= sizeof(char **);
+  *(char **)if_.esp = (char *) if_.esp + sizeof(char **);
 
-  // push return address onto the stack
+  // argc
+  if_.esp -= sizeof(int);
+  *(int*)if_.esp = num_args;
+
+  // fake return address
   if_.esp -= sizeof(void *);
-  *(void **)if_.esp = 0;
+  memset(if_.esp, 0, sizeof(void *));
+
 
   /* If load failed, quit. */
-  palloc_free_page(file_name);
-  if (!success)
-    thread_exit();
+  palloc_free_page (args[0]);
+  if (!success) 
+    thread_exit ();
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -134,8 +148,8 @@ start_process (void *file_name_)
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
-  asm volatile("movl %0, %%esp; jmp intr_exit" : : "g"(&if_) : "memory");
-  NOT_REACHED();
+  asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
+  NOT_REACHED ();
 }
 
 /* Waits for thread TID to die and returns its exit status.  If
