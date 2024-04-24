@@ -34,6 +34,8 @@ All the files not present in the repository are kept as the original ones.
 - [x] Milestone 3
     * [Report PDF](./reports/project3/OS_Project3.pdf)
     * Description: Updated the scheduler to use the priority of the threads and nice values
-- [ ] Milestone 4
+- [x] Milestone 4
+    * [Report PDF](./reports/project4/OS_Project4.pdf)
+    * Description: Implemented the system calls `write` and `exit` for an initial `user programs` support
 - [ ] Milestone 5
 - [ ] Milestone 6

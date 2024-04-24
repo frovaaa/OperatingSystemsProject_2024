@@ -1,0 +1,271 @@
+\documentclass[11pt]{scrartcl}
+\newcommand*\student[1]{\newcommand{\thestudent}{{#1}}}
+\newcommand*\course[1]{\newcommand{\thecourse}{{#1}}}
+\newcommand*\courseshort[1]{\newcommand{\thecourseshort}{{#1}}}
+\newcommand*\assnumber[1]{\newcommand{\theassnumber}{{#1}}}
+\setcounter{secnumdepth}{4}
+
+\student{}
+\course{}
+\courseshort{} 
+\assnumber{}
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\usepackage[utf8]{inputenc} % Required for inputting international characters
+\usepackage[T1]{fontenc} % Use 8-bit encoding
+\usepackage[sc]{mathpazo}
+\usepackage{caption, subcaption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{inconsolata}
+\usepackage[svgnames,table]{xcolor}
+\usepackage{booktabs}
+\usepackage{boldline}
+% \usepackage{minted}
+\usepackage{mathtools}
+\usepackage{chemfig}
+% \usepackage{minted}
+\usepackage{caption}
+\usepackage{subcaption}
+
+	
+\usepackage{color, colortbl}
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\definecolor{LightGreen}{rgb}{1,0.88,1}
+\definecolor{LightRed}{rgb}{0.8,1,0.90}
+\definecolor{LightBoh}{rgb}{0.3,0.7,0.88}
+
+
+\usepackage[english]{babel} % English language hyphenation
+\usepackage{amssymb}
+\usepackage{amsmath}% Math packages
+\usepackage{bm}
+\usepackage{listings} % Code listings, with syntax highlighting
+\usepackage{graphicx} % Required for inserting images
+\usepackage{float}
+
+% \usepackage{minted}
+
+\usepackage{courier} %% Sets font for listing as Courier.
+\usepackage{listings, xcolor}
+
+\lstset{
+tabsize = 4, %% set tab space width
+showstringspaces = false, %% prevent space marking in strings, string is defined as the text that is generally printed directly to the console
+numbers = left, %% display line numbers on the left
+commentstyle = \color{green}, %% set comment color
+keywordstyle = \color{blue}, %% set keyword color
+stringstyle = \color{red}, %% set string color
+rulecolor = \color{black}, %% set frame color to avoid being affected by text color
+basicstyle = \small \ttfamily , %% set listing font and size
+breaklines = true, %% enable line breaking
+numberstyle = \tiny,
+}
+
+
+%             \begin{lstlisting}[language = Java, frame = single, firstnumber = last, escapeinside={(*@}{@*)}]
+% % 
+%             \end{lstlisting}
+%----------------------------------------------------------------------------------------
+%	DOCUMENT MARGINS
+%----------------------------------------------------------------------------------------
+
+
+\usepackage{geometry} % For page dimensions and margins
+\geometry{
+	paper=a4paper, 
+	top=2.5cm, % Top margin
+	bottom=3cm, % Bottom margin
+	left=2cm, % Left margin
+	right=2cm, % Right margin
+}
+\setlength\parindent{0pt}
+
+%----------------------------------------------------------------------------------------
+%	SECTION TITLES
+%----------------------------------------------------------------------------------------
+
+\usepackage{sectsty}
+\sectionfont{\vspace{6pt}\centering\normalfont\LARGE\scshape}
+\subsectionfont{\normalfont\Large\bfseries} % \subsection{} styling
+\subsubsectionfont{\normalfont\large\itshape} % \subsubsection{} styling
+\paragraphfont{\normalfont\scshape} % \paragraph{} styling
+
+%----------------------------------------------------------------------------------------
+%	HEADERS AND FOOTERS
+%----------------------------------------------------------------------------------------
+
+\usepackage{scrlayer-scrpage}
+\ofoot*{\pagemark} % Right footer
+\ifoot*{} % Left footer
+\cfoot*{\thecourseshort \  \theassnumber} % Centre footer
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\title{	
+    \vspace{-3cm} 
+    \begin{figure}[H]
+        \hspace{-2cm}
+    	\includegraphics[width=65mm]{./template/usi-inf-logo.png}
+    \end{figure}
+    \vspace{1cm} 
+	\normalfont\large
+	\textsc{Operating Systems\thecourse}\\
+	\vspace{5pt}
+	\rule{\linewidth}{0.5pt}\\
+	\vspace{10pt}
+	{\LARGE PintOS: Report Project \textbf{\#4} \theassnumber}\\
+	\vspace{5pt}
+	\rule{\linewidth}{0.5pt}\\
+	\vspace{5pt}
+}
+
+\author{
+	\LARGE
+	Group \#6 \\
+	Davide Frova, Costanza Rodriguez Gavazzi
+}
+
+\date{\normalsize Fall Semester, \today}
+
+\begin{document}
+
+\maketitle
+
+\section{Files changed }
+\begin{itemize}
+    \item \textbf{/pintos/threads/thread.h} (\textit{modified})
+    \item \textbf{/pintos/threads/thread.c} (\textit{modified})
+    \item \textbf{/pintos/userprog/process.c} (\textit{modified})
+    \item \textbf{/pintos/userprog/syscall.c} (\textit{modified})
+    \item \textbf{/pintos/lib/syscall-nr.h} (\textit{modified})
+
+\end{itemize}
+
+\section{Changes}
+
+\subsection*{/pintos/threads/thread.h}
+
+\begin{itemize}
+    \item Added \textbf{struct thread * parent} and \textbf{int * exit\_status} in \textbf{struct thread}
+    \item Added method signature for the new method added in \textbf{/pintos/threads/thread.c}
+
+\end{itemize}
+
+\subsection*{/pintos/devices/thread.c}
+
+\begin{itemize}
+    \item (\textit{added}) \textbf{Method}:
+          \begin{itemize}
+              \item \textbf{struct thread * thread\_get(tid\_t tid)}, given a tid\_t, returns the corresponding thread.
+                    This is achived by iterating over the list of all threads and returning the one with the same tid.
+                    If no thread is found, it returns \textbf{NULL}.
+          \end{itemize}
+
+    \item (\textit{modified}) \textbf{tid\_t thread\_create (const char *name, int priority, thread\_func *function, void *aux)}:
+          We added the following lines of code to the function:
+          \begin{itemize}
+              \item \textbf{t->parent = NULL}: set the parent of the new thread to \textbf{NULL}.
+              \item \textbf{t->exit\_status = -80085}: set the exit status of the new thread to -80085 as a default value.
+                    This value is chosen to be different from the default value of the exit status of the main thread.
+          \end{itemize}
+\end{itemize}
+
+\subsection*{/pintos/userprog/process.c}
+
+% added #define MAX\_ARGS 128
+% modified tid_t process_execute (const char *file_name) 
+% modified static void start_process (void *file_name_)
+% modified int process_wait(tid_t child_tid)
+
+\begin{itemize}
+    \item (\textit{added}) \textbf{\#define MAX\_ARGS 128}:
+          We added a define for the maximum number of arguments that can be passed to a process.
+          This is used to allocate the space for the arguments array in the \textbf{process\_execute} and \textbf{start\_process} functions.
+
+    \item (\textit{modified}) \textbf{tid\_t process\_execute (const char *file\_name)}:
+          In this function we added a parsing of the \textbf{file\_name} to extract the arguments.
+          The parsing is done by using the method \textbf{char *strtok\_r (char *, const char *, char **)}, this method is used to split the string by the space character.
+          After this we pass to the \textbf{thread\_create} function the first token as the name of the file.
+          The entire string is then passed to the \textbf{start\_process} function as the argument via the \textbf{void *aux} parameter of the \textbf{thread\_create} function.
+
+    \item (\textit{modified}) \textbf{static void start\_process (void *file\_name\_)}:
+          This function is used to push all the necessary parameters and needed data onto the stack.
+
+          These are the elements that are pushed onto the stack using the \textbf{if\_.esp} pointer
+          \begin{itemize}
+              \item Parse the \textbf{*file\_name} to extract all the arguments and file name, we use the same strategy as in the \textbf{process\_execute} function.
+              \item Push the \textbf{arguments} in reverse order while saving the corresponding pointers
+              \item Compute and push the \textbf{word align}
+              \item Push the \textbf{argv[agc]} so the 0 value
+              \item Push the \textbf{pointers} of the arguments in reverse order
+              \item Push the \textbf{argv} pointer
+              \item Push the \textbf{argc} (argument count)
+              \item Push the \textbf{return address} with value 0
+          \end{itemize}
+
+    \item (\textit{modified}) \textbf{int process\_wait(tid\_t child\_tid)}:
+          Implemented the function to handle the wait of a process.
+
+          First we get the corresponding \textbf{struct thread *child} by using the \textbf{thread\_get} function defined in \textbf{/pintos/devices/thread.c}
+
+          Then we perform some checks, we check if the \textbf{thread\_get} function returned \textbf{NULL} or if the \textbf{child->parent} is not \textbf{NULL}.
+          If those are the cases we return -1 as are not to be handled and some error has occurred.
+
+          After this we assign to the \textbf{child} the parent thread corresponding to the \textbf{thread\_current()}
+
+          Then we assign the address for it's \textbf{exit\_status}
+
+          Finally we disable \textbf{interrupts}, block the current thread, and after that re-enable the interrupts and return the resulting exit status of the child.
+
+          The thread will get \textbf{unblocked} after the child exits and terminates it's execution.
+\end{itemize}
+
+
+
+
+\subsection*{/pintos/userprog/syscall.c}
+
+\begin{itemize}
+    \item (\textit{modified}) \textbf{static void syscall\_handler (struct intr\_frame *f UNUSED) }:
+          In this function we added a switch statement to handle the different syscall codes.
+
+          The syscall code is read from the stack and stored in the \textbf{enum syscall\_code s\_code} variable.
+          This will be used as a switch case to handle the different syscalls.
+
+          We added the following cases:
+          \begin{itemize}
+              \item \textbf{SYS\_WRITE}:
+                    To handle the write syscall we read from the stack:
+                    \begin{itemize}
+                        \item \textbf{int fd}: the file descriptor
+                        \item \textbf{char *buffer}: the buffer address
+                        \item \textbf{unsigned int size}: the size of the buffer
+                    \end{itemize}
+                    We then  call the \textbf{void putbuf (const char *buffer, size\_t n) } function to write the buffer to the console.
+              \item \textbf{SYS\_EXIT}:
+                    To handle the exit syscall we read from the stack:
+                    \begin{itemize}
+                        \item \textbf{int exit\_status}: the exit status
+                    \end{itemize}
+                    We then set the exit status of the current thread to the status,
+                    save it into \textbf{f->eax},
+                    \textbf{print} the exit statement of the current thread,
+                    \textbf{unblock} the parent of the current thread and call the \textbf{thread\_exit()} function.
+              \item \textbf{default}:
+                    We added a default case to handle the case in which the syscall code is not recognized.
+                    In that case, we print an error message and call the \textbf{thread\_exit()} function.
+          \end{itemize}
+\end{itemize}
+
+\subsection*{/pintos/lib/syscall-nr.h}
+
+\begin{itemize}
+    \item We added the name \textbf{syscall\_code} to the enum declaration to be able to use it in the \textbf{syscall.c} file.
+\end{itemize}
+
+\end{document}
