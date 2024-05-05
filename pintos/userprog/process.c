@@ -129,6 +129,13 @@ start_process (void * command)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+  if (thread_current()->parent != NULL){
+    struct child_elem * child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
+    child_elem->successful_load = success;
+  }
+
+  sema_up(&thread_current()->child_load);
+
   /* If load failed, quit. */
   if (!success)
   {
@@ -171,8 +178,21 @@ process_wait (tid_t child_tid)
   if (child == NULL || child->parent != thread_current())
     return -1;
 
-  child->parent_waiting = true;
-  thread_block ();
+  // child->parent_waiting = true;
+
+  struct child_elem * child_elem = thread_get_child(thread_current(), child_tid);
+  if (child_elem == NULL || child_elem->first_time == false)
+  {
+    return -1;
+  } else {
+    child_elem->first_time = false;
+
+    if(child_elem->cur_status == ALIVE){
+      sema_down(&(child_elem->child->child_exit));
+    }
+  }
+
+  // thread_block ();
 
   intr_set_level (old_level);
 
@@ -190,6 +210,34 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+  struct child_elem * child_elem;
+
+  // If I have a parent
+  if(thread_current()->parent != NULL){
+    // get this thread as child
+    child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
+
+    if (child_elem->cur_status == ALIVE){
+      child_elem->cur_status = KILLED;
+      child_elem->child->exit_status = -1;
+    }
+  }
+
+  sema_up(&thread_current()->child_exit);
+
+  // free memory of children of child
+  struct list_elem * first = list_begin(&child_elem->child->child_list);
+  while(first != list_end(&child_elem->child->child_list)){
+    struct list_elem * next = list_next(first);
+    struct child_elem * c = list_entry(first, struct child_elem, elem);
+    list_remove(first);
+    free(c);
+    first = next;
+  }
+
+  // remove parent from child
+  thread_current()->parent = NULL;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -211,9 +259,9 @@ process_exit (void)
   /* Print exit status, required for the tests. */
   printf("%s: exit(%d)\n", cur->name, cur->exit_status);
 
-  /* Unblock the parent, if the parent is waiting for this thread. */
-  if (cur->parent_waiting)
-    thread_unblock(cur->parent);
+  // /* Unblock the parent, if the parent is waiting for this thread. */
+  // if (cur->parent_waiting)
+  //   thread_unblock(cur->parent);
 }
 
 /* Sets up the CPU for running user code in the current

@@ -14,6 +14,8 @@ static void syscall_handler (struct intr_frame *);
 typedef void (*handler) (struct intr_frame *);
 static void syscall_exit (struct intr_frame *f);
 static void syscall_write (struct intr_frame *f);
+static void syscall_wait (struct intr_frame *f);
+static void syscall_exec (struct intr_frame *f);
 
 #define SYSCALL_MAX_CODE 19
 static handler call[SYSCALL_MAX_CODE + 1];
@@ -30,6 +32,8 @@ syscall_init (void)
    * lib/user/syscall.c for a short explanation of each system call. */
   call[SYS_EXIT]  = syscall_exit;   // Terminate this process.
   call[SYS_WRITE] = syscall_write;  // Write to a file.
+  call[SYS_WAIT] = syscall_wait;    // wait for a child thread to finish
+
 }
 
 static void
@@ -45,7 +49,24 @@ syscall_exit (struct intr_frame *f)
   int *stack = f->esp;
   struct thread* t = thread_current ();
   t->exit_status = *(stack+1);
+
+  struct child_elem * child_elem = thread_get_child(t->parent, t->tid);
+
+  if (t->exit_status == -1){
+    child_elem->cur_status = KILLED;
+  } else {
+    child_elem->cur_status = EXITED;
+  }
+
   thread_exit ();
+}
+
+static void
+syscall_wait(struct intr_frame *f){
+  int *stack = f->esp;
+  // get the pid from the stack
+  int pid = *(stack + 1);
+  f->eax = process_wait(pid);
 }
 
 static void
@@ -57,4 +78,25 @@ syscall_write (struct intr_frame *f)
   int    length = *(stack+3);
   putbuf (buffer, length);
   f->eax = length;
+}
+
+static void
+syscall_exec (struct intr_frame *f){
+  int *stack = f->esp;
+  const char *cmd_line = *(stack + 1);
+
+  struct thread* parent = thread_current();
+  tid_t pid = -1;
+
+  pid = process_execute(cmd_line);
+
+  struct child_elem * child_elem = thread_get_child(thread_get_by_tid(pid)->parent, pid);
+
+  sema_down(&child_elem->child->child_load);
+
+  if(!child_elem->successful_load){
+    f->eax = -1;
+  }
+
+  f->eax = pid;
 }

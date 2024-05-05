@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.ejs": "html",
+        "list.h": "c",
+        "vaddr.h": "c",
+        "thread.h": "c",
+        "palloc.h": "c",
+        "process.h": "c"
+    }
+}

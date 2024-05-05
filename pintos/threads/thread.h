@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/fpr_arith.h"
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -14,6 +15,11 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
+
+#define ALIVE 8
+#define KILLED 0
+#define EXITED 1
+#define INITIAL_STATUS -5
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
@@ -110,6 +116,10 @@ struct thread
     bool parent_waiting;                /* True if parent is waiting */
 #endif
 
+    struct list child_list;              /* List of child threads */
+    struct semaphore child_load;         /* Semaphore for waiting for child to load */
+    struct semaphore child_exit;         /* Semaphore for child to exit */
+
     int64_t wakeup_at_tick;
 
     /* Owned by thread.c. */
@@ -119,6 +129,15 @@ struct thread
     int priority;                       /* Priority. */
     int nice;                           /* Niceness value. */
     FPReal recent_cpu;                  /* Recent cpu usage of the thread. */
+  };
+
+struct child_elem
+  {
+    struct list_elem elem; // Used by struct list
+    struct thread* child;  // Child thread pointer
+    bool first_time;       // True if this is the first time the parent is waiting for the child
+    int cur_status;        // Status of the child
+    bool successful_load;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -165,5 +184,7 @@ void thread_sleep (int64_t wakeup_at);
 bool thread_priority_cmp (const struct list_elem* a, 
   const struct list_elem* b,
   void* aux);
+
+struct child_elem* thread_get_child (struct thread* parent, tid_t child_tid);
 
 #endif /* threads/thread.h */

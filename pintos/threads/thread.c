@@ -290,6 +290,17 @@ thread_create (const char *name, int priority,
    * know it to unblock the parent. This member becomes true
    * when the parent calls process_wait(child_tid). */
   t->parent_waiting = false;
+
+  // Initialize the child_elem of the child that will be pushed in the child_list
+  // of the parent
+  struct child_elem * child = malloc(sizeof(struct child_elem));
+  child->child = t;
+  child->first_time = true;
+  child->cur_status = ALIVE;
+  child->successful_load = false;
+
+  // add the child to the parent's child_list
+  list_push_back(&t->parent->child_list, &t->elem);
   #endif
 
   /* Prepare thread for first run by initializing its stack.
@@ -679,6 +690,7 @@ init_thread (struct thread *t, const char *name, int priority)
    * filename that it executes, excluding any arguments passed
    * along with it in the command line. */
   str_copy_first_word(t->name, name, MAX_THREADNAME_LENGTH);
+  t->parent = NULL;
 #else
   /* For the threads tests to keep passing, the thread name should
    * contain all words passed to the (const char *name) argument. */
@@ -699,6 +711,13 @@ init_thread (struct thread *t, const char *name, int priority)
   }
 
   t->magic = THREAD_MAGIC;
+
+  // Initialize the child_list of the parent
+  list_init(&t->child_list);
+
+  // Initialize the semaphores to keep track of child load and exit
+  sema_init(&t->child_load, 0);
+  sema_init(&t->child_exit, 0);
 
   list_push_back (&all_list, &t->allelem);
 }
@@ -821,3 +840,15 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+struct child_elem* thread_get_child (struct thread* parent, tid_t child_tid) {
+  struct list_elem * it;
+  for (it  = list_begin(&parent->child_list) ;
+       it != list_end  (&parent->child_list) ;
+       it  = list_next (it))
+  {
+    struct child_elem * elth = list_entry(it, struct child_elem, elem);
+    if (elth->child->tid == child_tid) return elth;
+  }
+  return NULL;
+}
