@@ -1,65 +1,60 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "threads/palloc.h"
+#include "userprog/process.h"
+#include "devices/shutdown.h"
 
-static void syscall_handler(struct intr_frame *);
+static void syscall_handler (struct intr_frame *);
 
-void syscall_init(void)
+typedef void (*handler) (struct intr_frame *);
+static void syscall_exit (struct intr_frame *f);
+static void syscall_write (struct intr_frame *f);
+
+#define SYSCALL_MAX_CODE 19
+static handler call[SYSCALL_MAX_CODE + 1];
+
+void
+syscall_init (void) 
 {
-  intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
+  intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+
+  /* Any syscall not registered here should be NULL (0) in the call array. */
+  memset(call, 0, SYSCALL_MAX_CODE + 1);
+
+  /* Check file lib/syscall-nr.h for all the syscall codes and file
+   * lib/user/syscall.c for a short explanation of each system call. */
+  call[SYS_EXIT]  = syscall_exit;   // Terminate this process.
+  call[SYS_WRITE] = syscall_write;  // Write to a file.
 }
 
 static void
-syscall_handler(struct intr_frame *f UNUSED)
+syscall_handler (struct intr_frame *f)
 {
-  unsigned int bytes_read = 0;
+  int syscall_code = *((int*)f->esp);
+  call[syscall_code](f);
+}
 
-  enum syscall_code s_code = *(enum syscall_code *)(f->esp + bytes_read);
-  bytes_read += sizeof(enum syscall_code);
+static void
+syscall_exit (struct intr_frame *f)
+{
+  int *stack = f->esp;
+  struct thread* t = thread_current ();
+  t->exit_status = *(stack+1);
+  thread_exit ();
+}
 
-  switch (s_code)
-  {
-  case SYS_WRITE:
-  {
-    int fd = *(int *)(f->esp + bytes_read);
-    bytes_read += sizeof(int);
-
-    char *buffer = *(char **)(f->esp + bytes_read);
-    bytes_read += sizeof(char *);
-
-    unsigned int size = *(unsigned int *)(f->esp + bytes_read);
-    bytes_read += sizeof(unsigned int);
-
-    putbuf(buffer, size);
-
-    break;
-  }
-
-  case SYS_EXIT:
-  { // exit status is stored in the thread's exit_status
-    int exit_status = *(int *)(f->esp + bytes_read);
-    bytes_read += sizeof(int);
-
-    f->eax = exit_status;
-
-    // setting the exit status of the current thread
-    *(thread_current()->exit_status) = exit_status;
-
-    // unblocking the parent thread because the child has exited
-    printf("%s: exit(%d)\n", thread_current()->name, exit_status);
-
-    thread_unblock(thread_current()->parent);
-    thread_exit();
-
-    NOT_REACHED(); // as seen in thread.c, panic if thread cannot exit
-    break;
-  }
-
-  default:
-    printf("Unknown system call\n");
-    thread_exit();
-    NOT_REACHED();
-  }
+static void
+syscall_write (struct intr_frame *f)
+{
+  int *stack = f->esp;
+  ASSERT (*(stack+1) == 1); // fd 1
+  char * buffer = *(stack+2);
+  int    length = *(stack+3);
+  putbuf (buffer, length);
+  f->eax = length;
 }
