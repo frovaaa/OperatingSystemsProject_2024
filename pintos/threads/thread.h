@@ -135,6 +135,7 @@ struct child_elem
   {
     struct list_elem elem; // Used by struct list
     struct thread* child;  // Child thread pointer
+    tid_t child_pid;       // Child thread pid
     bool first_time;       // True if this is the first time the parent is waiting for the child
     int cur_status;        // Status of the child
     bool successful_load;

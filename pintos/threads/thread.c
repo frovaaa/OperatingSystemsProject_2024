@@ -298,9 +298,10 @@ thread_create (const char *name, int priority,
   child->first_time = true;
   child->cur_status = ALIVE;
   child->successful_load = false;
+  child->child_pid = t->tid;
 
   // add the child to the parent's child_list
-  list_push_back(&t->parent->child_list, &t->elem);
+  list_push_back(&thread_current()->child_list, &child->elem);
   #endif
 
   /* Prepare thread for first run by initializing its stack.
@@ -848,7 +849,7 @@ struct child_elem* thread_get_child (struct thread* parent, tid_t child_tid) {
        it  = list_next (it))
   {
     struct child_elem * elth = list_entry(it, struct child_elem, elem);
-    if (elth->child->tid == child_tid) return elth;
+    if (elth->child_pid == child_tid) return elth;
   }
   return NULL;
 }

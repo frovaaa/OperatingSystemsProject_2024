@@ -224,6 +224,9 @@ process_exit (void)
     }
   }
 
+  /* Print exit status, required for the tests. */
+  printf("%s: exit(%d)\n", cur->name, cur->exit_status);
+
   sema_up(&thread_current()->child_exit);
 
   // free memory of children of child
@@ -256,8 +259,8 @@ process_exit (void)
       pagedir_destroy (pd);
     }
 
-  /* Print exit status, required for the tests. */
-  printf("%s: exit(%d)\n", cur->name, cur->exit_status);
+  // /* Print exit status, required for the tests. */
+  // printf("%s: exit(%d)\n", cur->name, cur->exit_status);
 
   // /* Unblock the parent, if the parent is waiting for this thread. */
   // if (cur->parent_waiting)
