@@ -1,2 +1,5 @@
 # DS Store files
 .DS_Store
+
+# all /build directories
+**/build/
