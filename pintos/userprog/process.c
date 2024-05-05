@@ -129,13 +129,6 @@ start_process (void * command)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
-  if (thread_current()->parent != NULL){
-    struct child_elem * child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
-    child_elem->successful_load = success;
-  }
-
-  sema_up(&thread_current()->child_load);
-
   /* If load failed, quit. */
   if (!success)
   {
@@ -144,6 +137,13 @@ start_process (void * command)
   }
   else
   {
+    if (thread_current()->parent != NULL){
+      struct child_elem * child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
+      child_elem->successful_load = success;
+    }
+
+    sema_up(&thread_current()->child_load);
+
     parse_args_onto_stack(&if_.esp, command);
     palloc_free_page (command);
   }

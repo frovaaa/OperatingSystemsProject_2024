@@ -51,14 +51,17 @@ syscall_exit (struct intr_frame *f)
   struct thread* t = thread_current ();
   t->exit_status = *(stack+1);
 
-  struct child_elem * child_elem = thread_get_child(t->parent, t->tid);
+  if (t->parent != NULL){
+    struct child_elem * child_elem = thread_get_child(t->parent, t->tid);
 
-  if (t->exit_status == -1){
-    child_elem->cur_status = KILLED;
-  } else {
-    child_elem->cur_status = EXITED;
+    if (t->exit_status == -1){
+      child_elem->cur_status = KILLED;
+    } else {
+      child_elem->cur_status = EXITED;
+    }
   }
 
+  
   thread_exit ();
 }
 
