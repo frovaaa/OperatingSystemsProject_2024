@@ -8,6 +8,7 @@
 #include "threads/palloc.h"
 #include "userprog/process.h"
 #include "devices/shutdown.h"
+#include "userprog/pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -84,6 +85,21 @@ static void
 syscall_exec (struct intr_frame *f){
   int *stack = f->esp;
   const char *cmd_line = *(stack + 1);
+
+  // check if the pointer is valid
+
+  if(!is_user_vaddr(cmd_line)){
+    // push -1 on stack and call exit
+    f->eax = -1;
+    syscall_exit(f);
+  }
+
+  void * check = pagedir_get_page(thread_current()->pagedir, cmd_line);
+  if(check == NULL){
+    // push -1 on stack and call exit
+    f->eax = -1;
+    syscall_exit(f);
+  }
 
   struct thread* parent = thread_current();
   tid_t pid = -1;
