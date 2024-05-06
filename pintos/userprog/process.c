@@ -129,21 +129,20 @@ start_process (void * command)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+  if (thread_current()->parent != NULL){
+    struct child_elem * child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
+    child_elem->successful_load = success;
+  }
+  sema_up(&thread_current()->child_load);
   /* If load failed, quit. */
   if (!success)
   {
+    // set the child exit status -1
     palloc_free_page (command);
     thread_exit ();
   }
   else
   {
-    if (thread_current()->parent != NULL){
-      struct child_elem * child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
-      child_elem->successful_load = success;
-    }
-
-    sema_up(&thread_current()->child_load);
-
     parse_args_onto_stack(&if_.esp, command);
     palloc_free_page (command);
   }
@@ -181,6 +180,7 @@ process_wait (tid_t child_tid)
   // child->parent_waiting = true;
 
   struct child_elem * child_elem = thread_get_child(thread_current(), child_tid);
+  intr_set_level (old_level);
   if (child_elem == NULL || child_elem->first_time == false)
   {
     return -1;
@@ -194,7 +194,6 @@ process_wait (tid_t child_tid)
 
   // thread_block ();
 
-  intr_set_level (old_level);
 
   return child->exit_status;
 #else
@@ -211,6 +210,8 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  /* Print exit status, required for the tests. */
+  printf("%s: exit(%d)\n", cur->name, cur->exit_status);
   struct child_elem * child_elem;
 
   // If I have a parent
@@ -222,25 +223,26 @@ process_exit (void)
       child_elem->cur_status = KILLED;
       child_elem->child->exit_status = -1;
     }
+    sema_up(&thread_current()->child_exit);
+
+    // free memory of children of child
+    struct list_elem * first = list_begin(&child_elem->child->child_list);
+    while(first != list_end(&child_elem->child->child_list)){
+      struct list_elem * next = list_next(first);
+      struct child_elem * c = list_entry(first, struct child_elem, elem);
+      list_remove(first);
+      free(c);
+      first = next;
+    }
+    // remove child from parent
+    list_remove(&child_elem->elem);
+
+    // remove parent from child
+    thread_current()->parent = NULL;
+
   }
 
-  /* Print exit status, required for the tests. */
-  printf("%s: exit(%d)\n", cur->name, cur->exit_status);
 
-  sema_up(&thread_current()->child_exit);
-
-  // free memory of children of child
-  struct list_elem * first = list_begin(&child_elem->child->child_list);
-  while(first != list_end(&child_elem->child->child_list)){
-    struct list_elem * next = list_next(first);
-    struct child_elem * c = list_entry(first, struct child_elem, elem);
-    list_remove(first);
-    free(c);
-    first = next;
-  }
-
-  // remove parent from child
-  thread_current()->parent = NULL;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

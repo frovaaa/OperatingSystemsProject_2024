@@ -34,7 +34,7 @@ syscall_init (void)
   call[SYS_EXIT]  = syscall_exit;   // Terminate this process.
   call[SYS_WRITE] = syscall_write;  // Write to a file.
   call[SYS_WAIT] = syscall_wait;    // wait for a child thread to finish
-
+  call[SYS_EXEC] = syscall_exec;    // execute a new process
 }
 
 static void

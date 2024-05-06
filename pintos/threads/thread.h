@@ -17,7 +17,7 @@ enum thread_status
   };
 
 #define ALIVE 8
-#define KILLED 0
+#define KILLED -1
 #define EXITED 1
 #define INITIAL_STATUS -5
 
