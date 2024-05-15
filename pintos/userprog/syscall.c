@@ -8,15 +8,15 @@
 #include "threads/palloc.h"
 #include "userprog/process.h"
 #include "devices/shutdown.h"
-#include "userprog/pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 
 typedef void (*handler) (struct intr_frame *);
-static void syscall_exit (struct intr_frame *f);
-static void syscall_write (struct intr_frame *f);
-static void syscall_wait (struct intr_frame *f);
-static void syscall_exec (struct intr_frame *f);
+static void syscall_exit (struct intr_frame *);
+static void syscall_exec (struct intr_frame *);
+static void syscall_wait (struct intr_frame *);
+static void syscall_write (struct intr_frame *);
+static bool check_user_address (void *);
 
 #define SYSCALL_MAX_CODE 19
 static handler call[SYSCALL_MAX_CODE + 1];
@@ -31,10 +31,10 @@ syscall_init (void)
 
   /* Check file lib/syscall-nr.h for all the syscall codes and file
    * lib/user/syscall.c for a short explanation of each system call. */
-  call[SYS_EXIT]  = syscall_exit;   // Terminate this process.
-  call[SYS_WRITE] = syscall_write;  // Write to a file.
-  call[SYS_WAIT] = syscall_wait;    // wait for a child thread to finish
-  call[SYS_EXEC] = syscall_exec;    // execute a new process
+  call[SYS_EXIT]  = syscall_exit;   /* Terminate this process. */
+  call[SYS_EXEC]  = syscall_exec;   /* Start another process. */
+  call[SYS_WAIT]  = syscall_wait;   /* Wait for a child process to die. */
+  call[SYS_WRITE] = syscall_write;  /* Write to a file. */
 }
 
 static void
@@ -50,72 +50,41 @@ syscall_exit (struct intr_frame *f)
   int *stack = f->esp;
   struct thread* t = thread_current ();
   t->exit_status = *(stack+1);
-
-  if (t->parent != NULL){
-    struct child_elem * child_elem = thread_get_child(t->parent, t->tid);
-
-    if (t->exit_status == -1){
-      child_elem->cur_status = KILLED;
-    } else {
-      child_elem->cur_status = EXITED;
-    }
-  }
-
-  
+  thread_get_child_data(t->parent, t->tid)->exit_status = t->exit_status;
   thread_exit ();
 }
 
 static void
-syscall_wait(struct intr_frame *f){
-  int *stack = f->esp;
-  // get the pid from the stack
-  int pid = *(stack + 1);
-  f->eax = process_wait(pid);
+syscall_exec (struct intr_frame * f)
+{
+  int * stackpointer = f->esp;
+  char * command = (char *) *(stackpointer + 1);
+
+  if (check_user_address (command))
+    f->eax = process_execute (command);
+  else
+    f->eax = -1;
+}
+
+static void
+syscall_wait (struct intr_frame * f)
+{
+  int * stackpointer = (void *) f->esp;
+  tid_t child_tid = *(stackpointer + 1);
+  f->eax = process_wait (child_tid);
 }
 
 static void
 syscall_write (struct intr_frame *f)
 {
   int *stack = f->esp;
-  ASSERT (*(stack+1) == 1); // fd 1
+  ASSERT (*(stack+1) == 1); // fd 1 means stdout (standard output)
   char * buffer = *(stack+2);
   int    length = *(stack+3);
   putbuf (buffer, length);
   f->eax = length;
 }
 
-static void
-syscall_exec (struct intr_frame *f){
-  int *stack = f->esp;
-  const char *cmd_line = *(stack + 1);
-
-  // check if the pointer is valid
-
-  if(!is_user_vaddr(cmd_line)){
-    // push -1 on stack and call exit
-    f->eax = -1;
-    syscall_exit(f);
-  }
-
-  void * check = pagedir_get_page(thread_current()->pagedir, cmd_line);
-  if(check == NULL){
-    // push -1 on stack and call exit
-    f->eax = -1;
-    syscall_exit(f);
-  }
-
-  struct thread* parent = thread_current();
-  tid_t pid = -1;
-
-  pid = process_execute(cmd_line);
-
-  struct child_elem * child_elem = thread_get_child(thread_get_by_tid(pid)->parent, pid);
-
-  sema_down(&child_elem->child->child_load);
-
-  if(!child_elem->successful_load){
-    f->eax = -1;
-  }
-
-  f->eax = pid;
+static bool check_user_address (void * ptr) {
+  return ptr != NULL && is_user_vaddr (ptr) && pagedir_get_page (thread_current ()->pagedir, ptr);
 }

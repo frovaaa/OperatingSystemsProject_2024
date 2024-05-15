@@ -18,8 +18,6 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
-// Pintos is a 32-bit (4-byte pointer) OS
-#define POINTER_LENGTH        4
 // The following values were chosen arbitrarily
 #define MAX_ARGS             32
 #define MAX_FILENAME_LENGTH 255
@@ -93,7 +91,8 @@ tid_t
 process_execute (const char * command)
 {
   char * cmd_copy;
-  tid_t tid;
+
+  struct thread * cur = thread_current();
 
   /* Make a copy of COMMAND.
      Otherwise there's a race between the caller and load(). */
@@ -102,10 +101,32 @@ process_execute (const char * command)
     return TID_ERROR;
   strlcpy (cmd_copy, command, PGSIZE);
 
-  /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (command, PRI_DEFAULT, start_process, cmd_copy);
+  /* Create a new thread to execute FILE_NAME.
+   *
+   * The child itself is the one who tries to load the executable file.
+   * The parent must wait for the child to tell it if the load succeeded or not
+   * (check start_process, which is run by the child, as it is passed to the
+   * thread_create function).
+   *
+   * This communication between parent and child is done with the semaphore sem_child_loaded.
+   *
+   * By using a semaphore, it doesn't matter which thread (child or parent) reaches
+   * the semaphore first: if the parent reaches sema_down before the child reaches
+   * sema_up, the parent will block; and if the child reaches sema_up first, the semaphore's
+   * value will increase (storing the signal given by the child) and, when the parent
+   * reaches sema_down, it will unblock immediately, consuming the signal stored
+   * in the semaphore. */
+
+  tid_t tid = thread_create (command, PRI_DEFAULT, start_process, cmd_copy);
   if (tid == TID_ERROR)
     palloc_free_page (cmd_copy);
+  else {
+    sema_down(&cur->sem_child_loaded);
+    if (cur->child_load_error == true) {
+      process_wait(tid);
+      tid = TID_ERROR;
+    }
+  }
   return tid;
 }
 
@@ -129,20 +150,21 @@ start_process (void * command)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
-  if (thread_current()->parent != NULL){
-    struct child_elem * child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
-    child_elem->successful_load = success;
-  }
-  sema_up(&thread_current()->child_load);
+  /* Now we know whether the thread successfully started or not.
+   * Let its parent know this. */
+  struct thread * parent = thread_current()->parent;
+  parent->child_load_error = !success;
+  sema_up(&parent->sem_child_loaded);
+
   /* If load failed, quit. */
   if (!success)
   {
-    // set the child exit status -1
     palloc_free_page (command);
     thread_exit ();
   }
   else
   {
+    /* Command successfully started. Put the arguments in the stack. */
     parse_args_onto_stack(&if_.esp, command);
     palloc_free_page (command);
   }
@@ -171,31 +193,22 @@ process_wait (tid_t child_tid)
 {
 #ifdef USERPROG
 
-  enum intr_level old_level = intr_disable ();
+  struct thread * this_thread = thread_current();
 
-  struct thread * child = thread_get_by_tid(child_tid);
-  if (child == NULL || child->parent != thread_current())
+  struct child_thread_data * child_data = thread_get_child_data (this_thread, child_tid);
+  if (child_data == NULL)
     return -1;
+  else
+    sema_down(&child_data->sem_exited);
 
-  // child->parent_waiting = true;
+  /* Remove the child data from the children list, preventing the parent from waiting
+   * for this same child in the future. */
 
-  struct child_elem * child_elem = thread_get_child(thread_current(), child_tid);
-  intr_set_level (old_level);
-  if (child_elem == NULL || child_elem->first_time == false)
-  {
-    return -1;
-  } else {
-    child_elem->first_time = false;
+  int retval = child_data->exit_status;
+  list_remove (&child_data->elem);
+  free (child_data);
+  return retval;
 
-    if(child_elem->cur_status == ALIVE){
-      sema_down(&(child_elem->child->child_exit));
-    }
-  }
-
-  // thread_block ();
-
-
-  return child->exit_status;
 #else
   /* In case USERPROG was not defined (you can ignore/not implement this part). */
   return -1;
@@ -209,40 +222,6 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
-  /* Print exit status, required for the tests. */
-  printf("%s: exit(%d)\n", cur->name, cur->exit_status);
-  struct child_elem * child_elem;
-
-  // If I have a parent
-  if(thread_current()->parent != NULL){
-    // get this thread as child
-    child_elem = thread_get_child(thread_current()->parent, thread_current()->tid);
-
-    if (child_elem->cur_status == ALIVE){
-      child_elem->cur_status = KILLED;
-      child_elem->child->exit_status = -1;
-    }
-    sema_up(&thread_current()->child_exit);
-
-    // free memory of children of child
-    struct list_elem * first = list_begin(&child_elem->child->child_list);
-    while(first != list_end(&child_elem->child->child_list)){
-      struct list_elem * next = list_next(first);
-      struct child_elem * c = list_entry(first, struct child_elem, elem);
-      list_remove(first);
-      free(c);
-      first = next;
-    }
-    // remove child from parent
-    list_remove(&child_elem->elem);
-
-    // remove parent from child
-    thread_current()->parent = NULL;
-
-  }
-
-
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -261,12 +240,17 @@ process_exit (void)
       pagedir_destroy (pd);
     }
 
-  // /* Print exit status, required for the tests. */
-  // printf("%s: exit(%d)\n", cur->name, cur->exit_status);
+  /* Freeing children list. */
+  while (list_empty(&cur->children_data) == false) {
+    struct list_elem * front = list_pop_front(&cur->children_data);
+    struct child_thread_data * child = list_entry(front, struct child_thread_data, elem);
+    free(child);
+  }
 
-  // /* Unblock the parent, if the parent is waiting for this thread. */
-  // if (cur->parent_waiting)
-  //   thread_unblock(cur->parent);
+  /* Tell the parent that this child has already exited. */
+  struct child_thread_data * me_child = thread_get_child_data(cur->parent, cur->tid);
+  sema_up(&me_child->sem_exited);
+
 }
 
 /* Sets up the CPU for running user code in the current

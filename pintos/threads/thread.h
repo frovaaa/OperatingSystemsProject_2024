@@ -16,11 +16,6 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
-#define ALIVE 8
-#define KILLED -1
-#define EXITED 1
-#define INITIAL_STATUS -5
-
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -112,13 +107,11 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t * pagedir;                 /* Page directory. */
     int exit_status;                    /* Status passed to exit() */
+    struct list children_data;          /* List of children of this thread; stays after children finish. */
+    struct semaphore sem_child_loaded; /* Makes this thread block when creating a new child, which unblocks it. */
+    bool child_load_error;            /* Used for the child to inform its parent about creation. */
     struct thread* parent;              /* Parent thread */
-    bool parent_waiting;                /* True if parent is waiting */
 #endif
-
-    struct list child_list;              /* List of child threads */
-    struct semaphore child_load;         /* Semaphore for waiting for child to load */
-    struct semaphore child_exit;         /* Semaphore for child to exit */
 
     int64_t wakeup_at_tick;
 
@@ -131,15 +124,21 @@ struct thread
     FPReal recent_cpu;                  /* Recent cpu usage of the thread. */
   };
 
-struct child_elem
-  {
-    struct list_elem elem; // Used by struct list
-    struct thread* child;  // Child thread pointer
-    tid_t child_pid;       // Child thread pid
-    bool first_time;       // True if this is the first time the parent is waiting for the child
-    int cur_status;        // Status of the child
-    bool successful_load;
-  };
+/* Used for the wait(tid) system call. The parent must keep track of the
+ * threads that it has created, so that it can return their correct exit
+ * status, even after they've finished. The child_thread item can be
+ * removed only after the thread has been waited for.
+ *    The alternative for this would be to assume that a thread only waits
+ * its last child, which is not part of the specification. */
+struct child_thread_data {
+    struct thread * thread_ref;
+    tid_t tid;
+    int exit_status;
+    struct semaphore sem_exited;
+    struct list_elem elem;
+};
+
+struct child_thread_data * thread_get_child_data(struct thread * parent, tid_t child_tid);
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -169,7 +168,7 @@ void thread_yield (void);
 void thread_yield_on_higher_priority (void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
-typedef void thread_action_func (struct thread *t, void *aux);
+typedef void thread_action_func (struct thread *thread_ref, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
@@ -185,7 +184,5 @@ void thread_sleep (int64_t wakeup_at);
 bool thread_priority_cmp (const struct list_elem* a, 
   const struct list_elem* b,
   void* aux);
-
-struct child_elem* thread_get_child (struct thread* parent, tid_t child_tid);
 
 #endif /* threads/thread.h */
