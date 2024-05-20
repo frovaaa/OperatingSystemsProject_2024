@@ -88,33 +88,6 @@ void thread_recalculate_recent_cpu_all_threads(void);
 void thread_yield_for_higher_priority(void);
 bool thread_cmp_priority (const struct list_elem *, const struct list_elem *, void *);
 
-struct child_thread_data *
-thread_get_child_data (struct thread * parent, tid_t child_tid) {
-
-#ifdef USERPROG
-
-  if (parent == NULL) return NULL;
-
-  struct list_elem * it;
-  for (it  = list_begin(&parent->children_data) ;
-       it != list_end  (&parent->children_data) ;
-       it  = list_next(it))
-  {
-    struct child_thread_data * t = list_entry(it, struct child_thread_data, elem);
-    if (t->tid == child_tid)
-      return t;
-  }
-
-#else
-
-  (void)(parent);
-  (void)(child_tid);
-
-#endif
-
-  return NULL;
-}
-
 struct thread *
 thread_get_by_tid (int tid) {
   struct thread * th = 0;
@@ -159,13 +132,6 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-
-#ifdef USERPROG
-  list_init(&initial_thread->children_data);
-  initial_thread->parent = NULL;
-  /* Use this semaphore to allow the new thread to wait for its own children to be created. */
-  sema_init(&initial_thread->sem_child_loaded, 0);
-#endif
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -218,11 +184,15 @@ check_sleeping_threads (void)
     {
       list_remove (it);
       thread_unblock (th);
+      //printf ("--- woke up thread %p\n", th);
     }
     it = next;
   }
   intr_set_level (old_lvl);
 }
+
+
+
 
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
@@ -232,7 +202,7 @@ thread_tick (void)
   struct thread *t = thread_current ();
 
   /* Update statistics. */
-  ticks++;
+	ticks++;
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
@@ -308,36 +278,31 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
-#ifdef USERPROG
+  #ifdef USERPROG
+  /* If the new thread fails to set its exit status,
+   * it should default to an error value. */
+  t->exit_status = TID_ERROR;
+
   /* This allows the new thread to know who is its parent. */
   t->parent = thread_current ();
 
-  /* Use this semaphore to allow the new thread to wait for its own children to be created. */
-  sema_init(&t->sem_child_loaded, 0);
+  /* If the parent is waiting for its child, the child must
+   * know it to unblock the parent. This member becomes true
+   * when the parent calls process_wait(child_tid). */
+  t->parent_waiting = false;
 
-  /* Add this child to the list of parent's children for the
-   * exit status. */
-  struct child_thread_data * ct = malloc(sizeof(struct child_thread_data));
-  ct->exit_status = -1;
-  ct->thread_ref = t;
-  ct->tid = tid;
-  sema_init(&ct->sem_exited , 0);
-  list_push_back(&t->parent->children_data, &ct->elem);
+  // Initialize the child_elem of the child that will be pushed in the child_list
+  // of the parent
+  struct child_elem * child = malloc(sizeof(struct child_elem));
+  child->child = t;
+  child->first_time = true;
+  child->cur_status = ALIVE;
+  child->successful_load = false;
+  child->child_pid = t->tid;
 
-  /* If the new thread fails to set its exit status,
-   * it should default to an error value. */
-  t->exit_status = -1;
-
-  /* This is the list of successfully exited children of the
-     new thread. Not being on this list means that:
-     1) the child has not finished
-     2) the thread being looked for is not this thread's child
-     3) the thread has already been waited for and removed
-     4) the thread didn't finish correctly
-     In any of the above cases, waiting for a finished thread
-     should return -1 */
-  list_init(&t->children_data);
-#endif
+  // add the child to the parent's child_list
+  list_push_back(&thread_current()->child_list, &child->elem);
+  #endif
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
@@ -451,7 +416,6 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
-  printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   process_exit ();
 #endif
 
@@ -727,11 +691,13 @@ init_thread (struct thread *t, const char *name, int priority)
    * filename that it executes, excluding any arguments passed
    * along with it in the command line. */
   str_copy_first_word(t->name, name, MAX_THREADNAME_LENGTH);
+  t->parent = NULL;
 #else
   /* For the threads tests to keep passing, the thread name should
    * contain all words passed to the (const char *name) argument. */
   strlcpy (t->name, name, sizeof t->name);
 #endif
+
 
   t->stack = (uint8_t *) t + PGSIZE;
 
@@ -746,6 +712,13 @@ init_thread (struct thread *t, const char *name, int priority)
   }
 
   t->magic = THREAD_MAGIC;
+
+  // Initialize the child_list of the parent
+  list_init(&t->child_list);
+
+  // Initialize the semaphores to keep track of child load and exit
+  sema_init(&t->child_load, 0);
+  sema_init(&t->child_exit, 0);
 
   list_push_back (&all_list, &t->allelem);
 }
@@ -868,3 +841,15 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+struct child_elem* thread_get_child (struct thread* parent, tid_t child_tid) {
+  struct list_elem * it;
+  for (it  = list_begin(&parent->child_list) ;
+       it != list_end  (&parent->child_list) ;
+       it  = list_next (it))
+  {
+    struct child_elem * elth = list_entry(it, struct child_elem, elem);
+    if (elth->child_pid == child_tid) return elth;
+  }
+  return NULL;
+}
