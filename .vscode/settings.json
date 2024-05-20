@@ -5,6 +5,9 @@
         "vaddr.h": "c",
         "thread.h": "c",
         "palloc.h": "c",
-        "process.h": "c"
+        "process.h": "c",
+        "shutdown.h": "c",
+        "pagedir.h": "c",
+        "hash.h": "c"
     }
 }

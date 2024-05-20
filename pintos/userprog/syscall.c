@@ -6,9 +6,11 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
+#include "threads/synch.h"
 #include "userprog/process.h"
-#include "devices/shutdown.h"
 #include "userprog/pagedir.h"
+#include "devices/shutdown.h"
+#include "lib/kernel/hash.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -22,10 +24,36 @@ static void syscall_halt (struct intr_frame *f);
 #define SYSCALL_MAX_CODE 19
 static handler call[SYSCALL_MAX_CODE + 1];
 
+unsigned item_hash (const struct hash_elem *e, void *aux);
+bool item_compare (const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
+
+struct item {
+  int fd;
+  struct file *file;
+  struct hash_elem elem;
+};
+
+unsigned item_hash (const struct hash_elem *e, void *aux){
+  const struct item *item = hash_entry(e, struct item, elem);
+  return hash_int(item->fd);
+}
+
+bool item_compare (const struct hash_elem *a, const struct hash_elem *b, void *aux){
+  const struct item *item_a = hash_entry(a, struct item, elem);
+  const struct item *item_b = hash_entry(b, struct item, elem);
+  return item_a->fd < item_b->fd;
+}
+
+struct hash file_table;
+struct semaphore file_table_lock;
+
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  hash_init(&file_table, item_hash, item_compare, NULL);
+  sema_init(&file_table_lock, 1);
 
   /* Any syscall not registered here should be NULL (0) in the call array. */
   memset(call, 0, SYSCALL_MAX_CODE + 1);
