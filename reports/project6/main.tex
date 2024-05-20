@@ -1,0 +1,314 @@
+\documentclass[11pt]{scrartcl}
+\newcommand*\student[1]{\newcommand{\thestudent}{{#1}}}
+\newcommand*\course[1]{\newcommand{\thecourse}{{#1}}}
+\newcommand*\courseshort[1]{\newcommand{\thecourseshort}{{#1}}}
+\newcommand*\assnumber[1]{\newcommand{\theassnumber}{{#1}}}
+\setcounter{secnumdepth}{4}
+
+\student{}
+\course{}
+\courseshort{} 
+\assnumber{}
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\usepackage[utf8]{inputenc} % Required for inputting international characters
+\usepackage[T1]{fontenc} % Use 8-bit encoding
+\usepackage[sc]{mathpazo}
+\usepackage{caption, subcaption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{inconsolata}
+\usepackage[svgnames,table]{xcolor}
+\usepackage{booktabs}
+\usepackage{boldline}
+% \usepackage{minted}
+\usepackage{mathtools}
+\usepackage{chemfig}
+% \usepackage{minted}
+\usepackage{caption}
+\usepackage{subcaption}
+
+	
+\usepackage{color, colortbl}
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\definecolor{LightGreen}{rgb}{1,0.88,1}
+\definecolor{LightRed}{rgb}{0.8,1,0.90}
+\definecolor{LightBoh}{rgb}{0.3,0.7,0.88}
+
+
+\usepackage[english]{babel} % English language hyphenation
+\usepackage{amssymb}
+\usepackage{amsmath}% Math packages
+\usepackage{bm}
+\usepackage{listings} % Code listings, with syntax highlighting
+\usepackage{graphicx} % Required for inserting images
+\usepackage{float}
+
+% \usepackage{minted}
+
+\usepackage{courier} %% Sets font for listing as Courier.
+\usepackage{listings, xcolor}
+
+\lstset{
+tabsize = 4, %% set tab space width
+showstringspaces = false, %% prevent space marking in strings, string is defined as the text that is generally printed directly to the console
+numbers = left, %% display line numbers on the left
+commentstyle = \color{green}, %% set comment color
+keywordstyle = \color{blue}, %% set keyword color
+stringstyle = \color{red}, %% set string color
+rulecolor = \color{black}, %% set frame color to avoid being affected by text color
+basicstyle = \small \ttfamily , %% set listing font and size
+breaklines = true, %% enable line breaking
+numberstyle = \tiny,
+}
+
+
+%             \begin{lstlisting}[language = Java, frame = single, firstnumber = last, escapeinside={(*@}{@*)}]
+% % 
+%             \end{lstlisting}
+%----------------------------------------------------------------------------------------
+%	DOCUMENT MARGINS
+%----------------------------------------------------------------------------------------
+
+
+\usepackage{geometry} % For page dimensions and margins
+\geometry{
+	paper=a4paper, 
+	top=2.5cm, % Top margin
+	bottom=3cm, % Bottom margin
+	left=2cm, % Left margin
+	right=2cm, % Right margin
+}
+\setlength\parindent{0pt}
+
+%----------------------------------------------------------------------------------------
+%	SECTION TITLES
+%----------------------------------------------------------------------------------------
+
+\usepackage{sectsty}
+\sectionfont{\vspace{6pt}\centering\normalfont\LARGE\scshape}
+\subsectionfont{\normalfont\Large\bfseries} % \subsection{} styling
+\subsubsectionfont{\normalfont\large\itshape} % \subsubsection{} styling
+\paragraphfont{\normalfont\scshape} % \paragraph{} styling
+
+%----------------------------------------------------------------------------------------
+%	HEADERS AND FOOTERS
+%----------------------------------------------------------------------------------------
+
+\usepackage{scrlayer-scrpage}
+\ofoot*{\pagemark} % Right footer
+\ifoot*{} % Left footer
+\cfoot*{\thecourseshort \  \theassnumber} % Centre footer
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\title{	
+    \vspace{-3cm} 
+    \begin{figure}[H]
+        \hspace{-2cm}
+    	\includegraphics[width=65mm]{./template/usi-inf-logo.png}
+    \end{figure}
+    \vspace{1cm} 
+	\normalfont\large
+	\textsc{Operating Systems\thecourse}\\
+	\vspace{5pt}
+	\rule{\linewidth}{0.5pt}\\
+	\vspace{10pt}
+	{\LARGE PintOS: Report Project \textbf{\#6} \theassnumber}\\
+	\vspace{5pt}
+	\rule{\linewidth}{0.5pt}\\
+	\vspace{5pt}
+}
+
+\author{
+	\LARGE
+	Group \#6 \\
+	Davide Frova, Costanza Rodriguez Gavazzi
+}
+
+\date{\normalsize Fall Semester, \today}
+
+\begin{document}
+
+\maketitle
+
+\section{Files changed }
+\begin{itemize}
+    \item \textbf{/pintos/threads/thread.h} (\textit{modified})
+    \item \textbf{/pintos/threads/thread.c} (\textit{modified})
+    \item \textbf{/pintos/userprog/process.c} (\textit{modified})
+    \item \textbf{/pintos/userprog/syscall.c} (\textit{modified})
+
+\end{itemize}
+
+\section{Changes}
+
+\subsection*{/pintos/threads/thread.h}
+
+\begin{itemize}
+
+\item[] Integrated given solution
+
+\end{itemize}
+
+\subsection*{/pintos/devices/thread.c}
+
+\begin{itemize}
+
+\item[] Integrated given solution
+
+\end{itemize}
+
+\subsection*{/pintos/userprog/process.c}
+
+\begin{itemize}
+
+\item[] Integrated given solution
+
+\end{itemize}
+
+
+\subsection*{/pintos/userprog/syscall.c}
+
+\begin{itemize}
+    \item (\textit{added}) \textbf{imports}
+    
+    \item (\textit{added}) method \textbf{signatures} for newly implemented methods
+    
+    \item (\textit{added}) \textbf{struct item \{int fd; struct file *file; struct hash\_elem elem;\}}: Needed to create hash table to map ints (fds) to file pointers. We decided to go with the globa table shared between threads (with a lock to access it)
+    
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{unsigned item\_hash(const struct hash\_elem *e, void *aux)}: required for hashtable definition and usage
+    
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{bool item\_compare(const struct hash\_elem *a, const struct hash\_elem *b, void *aux)}: required for hashtable definition and usage
+    
+    \item (\textit{added}) \textbf{\textit{gloabal variable}} \textbf{struct hash file\_table}: the actual hash table 
+    
+    \item (\textit{added}) \textbf{\textit{gloabal variable}} \textbf{struct semaphore file\_table\_lock}: the lock to protect the table 
+    
+        \item (\textit{added}) \textbf{\textit{gloabal variable}} \textbf{unsigned next\_fd}: a number to keep track of the unique hash table entries (files)
+        
+    \item (\textit{modified}) \textbf{void syscall\_init (void)}: 
+    \begin{itemize}
+        \item[] Added initialization of the hashtable and the lock
+        \item[] Added the syscall method references in the call[]
+    \end{itemize}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_halt (struct intr\_frame *f)}: Calling \textbf{shutdown\_power\_of()}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_create (struct intr\_frame *f)}:
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file name from the stack
+    \item[] Check if the pointer to the filename is valid using provided method
+    \item[] Get the initial size of the file from the stack
+    \item[] Create the file and store the result of this operation in a local variable
+    \item[] Put the result of the creation of the file in f->eax 
+    \item[] Release the lock
+\end{itemize}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_remove (struct intr\_frame *f)}:
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file name from the stack
+    \item[] Check if the pointer to the filename is valid using provided method
+    \item[] Remove the file and store the result of this operation in a local variable
+    \item[] Put the result of the operation in f->eax 
+    \item[] Release the lock
+\end{itemize}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_filesize (struct intr\_frame *f)}:
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file descriptor (fd) from the stack
+    \item[] Get the corresponding file from the hashtable
+    \item[] Check if what was retrieved is null, in that case release the lock and return the error code on f->eax
+    \item[] Otherwise get the file pointer from the hash table entry that we got
+    \item[] Get the filesize using the provided method file\_length
+    \item[] Put the result of the operation in f->eax 
+    \item[] Release the lock
+\end{itemize}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_close (struct intr\_frame *f)}:
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file descriptor (fd) from the stack
+    \item[] Get the corresponding file from the hashtable
+    \item[] Check if what was retrieved is null, in that case release the lock
+    \item[] Otherwise get the file pointer from the hash table entry that we got
+    \item[] Close the file using the provided method file\_close
+    \item[] Remove the entry from the hash table
+    \item[] Release the lock
+\end{itemize}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_tell (struct intr\_frame *f)}:
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file descriptor (fd) from the stack
+    \item[] Get the corresponding file from the hashtable
+    \item[] Check if what was retrieved is null, in that case release the lock and return the error code on f->eax
+    \item[] Otherwise get the file pointer from the hash table entry that we got
+    \item[] Get the file position using the provided method file\_tell
+    \item[] Put the result of the operation in f->eax 
+    \item[] Release the lock
+\end{itemize}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_seek (struct intr\_frame *f)}:
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file descriptor (fd) from the stack
+    \item[] Get the file position from the stack
+    \item[] Get the corresponding file from the hashtable
+    \item[] Check if what was retrieved is null, in that case release the lock 
+    \item[] Otherwise get the file pointer from the hash table entry that we got
+    \item[] Seek the file using the provided method file\_seek
+    \item[] Release the lock
+\end{itemize}
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_read (struct intr\_frame *f)}: 
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file descriptor (fd) from the stack
+    \item[] Get the buffer pointer from the stack
+    \item[] Get the buffer size from the stack
+    \item[] Check the validity of the buffer pointer, if it's invalid release the lock and return the error code on f->eax
+    \item[] Check if the file descriptor is 0 (stdin), if yes then we are reading from the keyboard so we fill the buffer using input\_getc(), then we push the size on f->eax and we release the lock.
+        \item[] Otherwise, get the corresponding file from the hashtable
+    \item[] Check if what was retrieved is null, in that case release the lock and return the error code on f->eax
+    \item[] Otherwise get the file pointer from the hash table entry that we got
+    \item[] Read from the file and save the result in the buffer using the provided method file\_read
+    \item[] Put how many bytes we read in f->eax
+    \item[] Release the lock
+\end{itemize}
+
+
+    \item (\textit{added}) \textbf{\textit{method}} \textbf{static void
+syscall\_open (struct intr\_frame *f)}:
+\begin{itemize}
+    \item[] Acquire the lock to access the file table 
+    \item[] Get the file pointer from the stack
+    \item[] Check the validity of the file pointer, if it's invalid release the lock and return the error code on f->eax
+    \item[] Otherwise, open the file with provided method filesys\_open and save its pointer in file\_opened
+    \item[] Check if the file was opened, if not then release the lock and return the error code on f->eax
+    \item[] Otherwise, create a new struct item *file\_item in order to put the file in the hash table
+    \item[] Set the fd as the next\_ft and the file pointer to the file\_opened
+    \item[] Instert the newly created element in the hashtable
+    \item[] Put the next\_fd in f->eax (because we return the fd of the newly opened file)
+    \item[] Increment the global next\_fd
+    \item[] Release the lock
+\end{itemize}
+    
+\end{itemize}
+
+\end{document}

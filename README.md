@@ -37,7 +37,10 @@ All the files not present in the repository are kept as the original ones.
 - [x] Milestone 4
     * [Report PDF](./reports/project4/OS_Project4.pdf)
     * Description: Implemented the system calls `write` and `exit` for an initial `user programs` support
-- [ ] Milestone 5
+- [x] Milestone 5
     * [Report PDF](./reports/project5/OS_Project5.pdf)
     * Description: Implemented the system calls `write` and `wait`
-- [ ] Milestone 6
+- [x] Milestone 6
+    * [Report PDF](./reports/project6/OS_Project6.pdf)
+    * Description: Implemented the remaining system calls
+
