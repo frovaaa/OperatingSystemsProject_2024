@@ -17,6 +17,7 @@ static void syscall_exit (struct intr_frame *f);
 static void syscall_write (struct intr_frame *f);
 static void syscall_wait (struct intr_frame *f);
 static void syscall_exec (struct intr_frame *f);
+static void syscall_halt (struct intr_frame *f);
 
 #define SYSCALL_MAX_CODE 19
 static handler call[SYSCALL_MAX_CODE + 1];
@@ -35,6 +36,7 @@ syscall_init (void)
   call[SYS_WRITE] = syscall_write;  // Write to a file.
   call[SYS_WAIT] = syscall_wait;    // wait for a child thread to finish
   call[SYS_EXEC] = syscall_exec;    // execute a new process
+  call[SYS_HALT] = syscall_halt;    // Halt the operating system.
 }
 
 static void
@@ -118,4 +120,10 @@ syscall_exec (struct intr_frame *f){
   }
 
   f->eax = pid;
+}
+
+static void
+syscall_halt (struct intr_frame *f)
+{
+  shutdown_power_off();
 }
